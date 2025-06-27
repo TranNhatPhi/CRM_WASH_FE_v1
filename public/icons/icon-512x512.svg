@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="wash-gradient-large" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="64" fill="url(#wash-gradient-large)"/>
+  
+  <!-- Car wash icon -->
+  <g transform="translate(128, 128)">
+    <!-- Car body -->
+    <rect x="42" y="128" width="172" height="86" rx="43" fill="white" opacity="0.9"/>
+    
+    <!-- Car wheels -->
+    <circle cx="64" cy="192" r="22" fill="white" opacity="0.7"/>
+    <circle cx="192" cy="192" r="22" fill="white" opacity="0.7"/>
+    
+    <!-- Water drops -->
+    <circle cx="54" cy="54" r="11" fill="white" opacity="0.8"/>
+    <circle cx="107" cy="43" r="8" fill="white" opacity="0.6"/>
+    <circle cx="160" cy="64" r="8" fill="white" opacity="0.7"/>
+    <circle cx="203" cy="32" r="11" fill="white" opacity="0.8"/>
+    <circle cx="139" cy="22" r="6" fill="white" opacity="0.9"/>
+    
+    <!-- Soap bubbles -->
+    <circle cx="86" y="86" r="5" fill="white" opacity="0.5"/>
+    <circle cx="128" cy="75" r="5" fill="white" opacity="0.6"/>
+    <circle cx="171" cy="96" r="5" fill="white" opacity="0.5"/>
+    <circle cx="75" cy="107" r="4" fill="white" opacity="0.4"/>
+    <circle cx="192" cy="107" r="4" fill="white" opacity="0.4"/>
+  </g>
+  
+  <!-- App title -->
+  <text x="256" y="400" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="42" font-weight="bold">CRM Wash</text>
+  <text x="256" y="440" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24" opacity="0.8">Point of Sale</text>
+</svg>

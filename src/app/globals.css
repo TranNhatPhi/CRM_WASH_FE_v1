@@ -1,0 +1,706 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import responsive styles for POS system */
+@import '../styles/responsive.css';
+
+/* Import SweetAlert2 CSS */
+@import 'sweetalert2/dist/sweetalert2.min.css';
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode styles */
+.dark body {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+/* Dark mode styles */
+.dark body {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+.dark {
+  --foreground-rgb: 241, 245, 249;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 30, 41, 59;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Custom scrollbar styles for POS interface */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+  border: 1px solid #1f2937;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.scrollbar-track-gray-800::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.scrollbar-thumb-gray-600::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.scrollbar-thumb-gray-500::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+/* Custom Scrollbar Styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #e5e7eb;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Dark mode scrollbar */
+.dark .scrollbar-thin {
+  scrollbar-color: #475569 #1e293b;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Chart container styles */
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+/* Dashboard card animations */
+.dashboard-card {
+  transition: all 0.3s ease-in-out;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* POS specific animations */
+@keyframes cart-item-add {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cart-item-enter {
+  animation: cart-item-add 0.3s ease-out;
+}
+
+/* Smooth scroll for better user experience */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+.focus-ring:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Enhanced hover effects for buttons */
+.btn-hover-scale:hover {
+  transform: scale(1.02);
+  transition: transform 0.2s ease;
+}
+
+/* Loading animation for checkout */
+@keyframes pulse-checkout {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.checkout-loading {
+  animation: pulse-checkout 2s infinite;
+}
+
+/* Custom utilities for POS interface */
+@layer utilities {
+  .h-26 {
+    height: 6.5rem;
+    /* 104px */
+  }
+
+  .h-32 {
+    height: 8rem;
+    /* 128px */
+  }
+
+  .text-wrap-balance {
+    text-wrap: balance;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .word-break-all {
+    word-break: break-all;
+  }
+
+  .hyphens-auto {
+    hyphens: auto;
+  }
+
+  /* Better text fitting for POS buttons */
+  .service-button-text {
+    font-size: 0.65rem;
+    line-height: 0.8rem;
+    word-break: break-word;
+    hyphens: auto;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+}
+
+/* Utility classes for common animations */
+
+/* SweetAlert2 - Simple & Clean Styles */
+.swal2-popup {
+  border-radius: 8px !important;
+  font-family: inherit !important;
+}
+
+.swal2-title {
+  font-size: 1.125rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.swal2-content {
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
+}
+
+.swal2-actions {
+  gap: 0.5rem !important;
+}
+
+.swal2-confirm,
+.swal2-cancel {
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.875rem !important;
+  border: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.swal2-confirm {
+  background-color: #10b981 !important;
+  color: white !important;
+}
+
+.swal2-confirm:hover {
+  background-color: #059669 !important;
+}
+
+.swal2-cancel {
+  background-color: #6b7280 !important;
+  color: white !important;
+}
+
+.swal2-cancel:hover {
+  background-color: #4b5563 !important;
+}
+
+/* Light mode */
+.swal2-popup {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Dark mode */
+.dark .swal2-popup {
+  background: #1f2937 !important;
+  color: #f9fafb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark .swal2-title {
+  color: #f9fafb !important;
+}
+
+.dark .swal2-content {
+  color: #d1d5db !important;
+}
+
+/* Backdrop */
+.swal2-backdrop-show {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Progress bar */
+.swal2-timer-progress-bar {
+  background: #10b981 !important;
+  height: 3px !important;
+}
+
+/* Icons */
+.swal2-icon {
+  margin: 0 0 1rem 0 !important;
+}
+
+.swal2-icon.swal2-success {
+  color: #10b981 !important;
+  border-color: #10b981 !important;
+}
+
+.swal2-icon.swal2-error {
+  color: #ef4444 !important;
+  border-color: #ef4444 !important;
+}
+
+.swal2-icon.swal2-warning {
+  color: #f59e0b !important;
+  border-color: #f59e0b !important;
+}
+
+.swal2-icon.swal2-question {
+  color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Simple fade animation for SweetAlert2 */
+@keyframes swalFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.swal2-show {
+  animation: swalFadeIn 0.2s ease-out !important;
+}
+
+/* Enhanced refresh button styles */
+.swal-loading-refresh-enhanced {
+  border-radius: 20px !important;
+  box-shadow: 0 25px 50px rgba(59, 130, 246, 0.25) !important;
+  border: 2px solid #dbeafe !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.swal-success-refresh {
+  border-radius: 16px !important;
+  box-shadow: 0 20px 40px rgba(34, 197, 94, 0.2) !important;
+  border: 1px solid #bbf7d0 !important;
+}
+
+/* Enhanced pulse animation */
+.pulse-loading {
+  animation: enhanced-pulse 2s infinite;
+}
+
+@keyframes enhanced-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+    transform: scale(1);
+  }
+
+  25% {
+    box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.2);
+    transform: scale(1.02);
+  }
+
+  50% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0.1);
+    transform: scale(1.05);
+  }
+
+  75% {
+    box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.2);
+    transform: scale(1.02);
+  }
+}
+
+/* Breathing animation for refresh button */
+@keyframes breathe {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.03);
+  }
+}
+
+.breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* Loading progress bar animation */
+@keyframes loading-progress {
+  0% {
+    width: 0%;
+  }
+
+  25% {
+    width: 30%;
+  }
+
+  50% {
+    width: 60%;
+  }
+
+  75% {
+    width: 85%;
+  }
+
+  100% {
+    width: 100%;
+  }
+}
+
+.loading-progress {
+  animation: loading-progress 2s ease-in-out infinite;
+}
+
+/* Floating refresh effect */
+@keyframes float-refresh {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.float-refresh {
+  animation: float-refresh 2s ease-in-out infinite;
+}
+
+/* Enhanced gradient text with more colors */
+@keyframes enhanced-gradient-text {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  25% {
+    background-position: 100% 50%;
+  }
+
+  50% {
+    background-position: 100% 100%;
+  }
+
+  75% {
+    background-position: 0% 100%;
+  }
+}
+
+.enhanced-gradient-text {
+  background: linear-gradient(-45deg, #3b82f6, #8b5cf6, #06b6d4, #10b981, #f59e0b, #ef4444);
+  background-size: 600% 600%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: enhanced-gradient-text 4s ease-in-out infinite;
+}
+
+/* Enhanced purple-pink-orange gradient for refresh button */
+.enhanced-gradient-text-purple {
+  background: linear-gradient(-45deg, #8b5cf6, #ec4899, #f97316, #06b6d4);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-text-purple 3s ease infinite;
+}
+
+@keyframes gradient-text-purple {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  25% {
+    background-position: 100% 50%;
+  }
+
+  50% {
+    background-position: 50% 100%;
+  }
+
+  75% {
+    background-position: 50% 0%;
+  }
+}
+
+/* Purple-pink refresh button pulse */
+@keyframes pulse-purple {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+  }
+
+  25% {
+    box-shadow: 0 0 0 5px rgba(236, 72, 153, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 0 10px rgba(249, 115, 22, 0.2);
+  }
+
+  75% {
+    box-shadow: 0 0 0 5px rgba(6, 182, 212, 0.3);
+  }
+}
+
+.pulse-loading {
+  animation: pulse-purple 2s infinite;
+}
+
+/* Enhanced shine effect for colorful button */
+.shine::after {
+  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), rgba(236, 72, 153, 0.3), rgba(249, 115, 22, 0.3), transparent);
+}
+
+/* Colorful ripple effect */
+.refresh-ripple::after {
+  background-image: radial-gradient(circle, rgba(139, 92, 246, 0.3) 10%, rgba(236, 72, 153, 0.2) 30%, rgba(249, 115, 22, 0.1) 60%, transparent 70%);
+}
+
+/* Floating animation with color change */
+@keyframes float-refresh-colorful {
+  0% {
+    transform: translateY(0px);
+    filter: hue-rotate(0deg);
+  }
+
+  25% {
+    transform: translateY(-3px);
+    filter: hue-rotate(90deg);
+  }
+
+  50% {
+    transform: translateY(0px);
+    filter: hue-rotate(180deg);
+  }
+
+  75% {
+    transform: translateY(-2px);
+    filter: hue-rotate(270deg);
+  }
+
+  100% {
+    transform: translateY(0px);
+    filter: hue-rotate(360deg);
+  }
+}
+
+.float-refresh {
+  animation: float-refresh-colorful 4s ease-in-out infinite;
+}
+
+/* Border gradient animation */
+@keyframes border-rainbow {
+  0% {
+    border-color: #8b5cf6;
+  }
+
+  25% {
+    border-color: #ec4899;
+  }
+
+  50% {
+    border-color: #f97316;
+  }
+
+  75% {
+    border-color: #06b6d4;
+  }
+
+  100% {
+    border-color: #8b5cf6;
+  }
+}
+
+.refresh-border-animate {
+  animation: border-rainbow 3s linear infinite;
+}
+
+/* Glow effect for refresh button */
+.refresh-glow::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #8b5cf6, #ec4899, #f97316, #06b6d4, #8b5cf6);
+  background-size: 200% 200%;
+  border-radius: inherit;
+  z-index: -1;
+  animation: gradient-rotate 3s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.refresh-glow:hover::before {
+  opacity: 0.7;
+}
+
+@keyframes gradient-rotate {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
