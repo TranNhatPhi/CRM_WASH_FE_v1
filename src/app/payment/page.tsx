@@ -154,11 +154,11 @@ function PaymentContent() {
         setPaymentMethod(method);
         // Don't clear cart from localStorage yet - wait until user goes back to POS
         // localStorage.removeItem('pos-cart');
-    };    const handleCompleteSale = () => {
+    }; const handleCompleteSale = () => {
         // Clear cart when completing sale (going back to POS after payment)
         localStorage.removeItem('pos-cart');
         router.push('/pos');
-    };    const handleBackAfterPayment = () => {
+    }; const handleBackAfterPayment = () => {
         // Clear cart when going back to POS after successful payment
         localStorage.removeItem('pos-cart');
         router.push('/pos');
@@ -182,6 +182,8 @@ function PaymentContent() {
     };
 
     const handleMainMenu = () => {
+        // Clear all data when going to main menu
+        localStorage.removeItem('pos-cart');
         router.push('/pos-dashboard');
     };
 

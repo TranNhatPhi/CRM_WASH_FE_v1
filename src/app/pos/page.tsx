@@ -120,39 +120,39 @@ export default function POSPage() {
     if (savedCartData) {
       try {
         const parsedData = JSON.parse(savedCartData);
-        
+
         // Restore if it came from payment page OR if there's existing data to restore
-        if ((parsedData.fromPayment && parsedData.cart && Array.isArray(parsedData.cart)) || 
-            (parsedData.cart && Array.isArray(parsedData.cart) && parsedData.customerExists !== undefined)) {
-          
+        if ((parsedData.fromPayment && parsedData.cart && Array.isArray(parsedData.cart)) ||
+          (parsedData.cart && Array.isArray(parsedData.cart) && parsedData.customerExists !== undefined)) {
+
           // Restore cart
           if (parsedData.cart && Array.isArray(parsedData.cart)) {
             setCart(parsedData.cart);
           }
-          
+
           // Restore customer and vehicle information
           if (parsedData.customerInfo) {
             setCustomerName(parsedData.customerInfo.name || '');
             setCustomerPhone(parsedData.customerInfo.phone || '');
             setIsVipCustomer(parsedData.customerInfo.isVip || false);
           }
-          
+
           // Restore customer check state
           if (parsedData.customerExists !== undefined) {
             setCustomerExists(parsedData.customerExists);
           }
-          
+
           if (parsedData.customerData) {
             setCustomerData(parsedData.customerData);
           }
-          
+
           // Restore car registration
           if (parsedData.carRegistration) {
             setCarRego(parsedData.carRegistration);
           } else if (parsedData.carInfo && parsedData.carInfo.licensePlate) {
             setCarRego(parsedData.carInfo.licensePlate);
           }
-          
+
           // Clear the fromPayment flag to prevent re-loading on subsequent visits
           if (parsedData.fromPayment) {
             const updatedData = { ...parsedData, fromPayment: false };
@@ -273,6 +273,30 @@ export default function POSPage() {
     setCustomerAddress('');
     setCustomerMembership('');
     setCustomerNote('');
+  };
+
+  // Handle Main Menu navigation - clear all data for fresh start
+  const handleMainMenuNavigation = () => {
+    // Clear cart
+    setCart([]);
+
+    // Clear customer data
+    clearAllCustomerData();
+
+    // Reset customer check states
+    setCustomerExists(null);
+    setCustomerData(null);
+    setShowCustomerForm(false);
+    setShowFullFormModal(false);
+
+    // Clear vehicle registration
+    setCarRego('');
+
+    // Clear localStorage
+    localStorage.removeItem('pos-cart');
+
+    // Navigate to dashboard
+    router.push('/pos-dashboard');
   };
 
   // Save customer and vehicle to backend
@@ -593,7 +617,7 @@ export default function POSPage() {
         }`}><div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => router.push('/pos-dashboard')}
+              onClick={handleMainMenuNavigation}
               className={`p-2 rounded-lg transition-all duration-200 hover:scale-110 ${isDarkMode
                 ? 'bg-gray-700 hover:bg-gray-600 text-gray-100 border border-gray-500'
                 : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 shadow-sm'
