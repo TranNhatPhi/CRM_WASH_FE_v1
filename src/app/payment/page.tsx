@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, X, Printer, Gift, Mail, Sun, Moon } from 'lucide-react';
 import { formatCurrency } from '@/utils';
+import Swal from 'sweetalert2/dist/sweetalert2.js';
 
 interface CartItem {
     service: {
@@ -24,6 +25,7 @@ function PaymentContent() {
     const [tax, setTax] = useState(0);
     const [showCashModal, setShowCashModal] = useState(false);
     const [amountGiven, setAmountGiven] = useState('');
+    const [finalAmountGiven, setFinalAmountGiven] = useState(''); // Store final amount after payment
     const [paymentComplete, setPaymentComplete] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('');
     const [isDarkMode, setIsDarkMode] = useState(false);
@@ -141,11 +143,39 @@ function PaymentContent() {
         }
     };
 
-    const handleCashPayment = () => {
+    const handleCashPayment = async () => {
         const given = parseFloat(amountGiven);
         if (given >= total) {
+            const change = given - total;
+
+            // Store the final amount given for display in success screen
+            setFinalAmountGiven(amountGiven);
+
+            // Show change notification if there's change to give
+            if (change > 0) {
+                const Swal = (await import('sweetalert2')).default;
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Payment Successful!',
+                    html: `
+                        <div style="text-align: center; font-size: 16px;">
+                            <p style="margin: 10px 0;"><strong>Amount Paid:</strong> ${formatCurrency(given)}</p>
+                            <p style="margin: 10px 0;"><strong>Sale Total:</strong> ${formatCurrency(total)}</p>
+                            <p style="margin: 15px 0; font-size: 20px; font-weight: bold; color: #10b981;">
+                                <strong>Change Due:</strong> ${formatCurrency(change)}
+                            </p>
+                        </div>
+                    `,
+                    confirmButtonColor: '#10b981',
+                    confirmButtonText: 'Continue',
+                    background: isDarkMode ? '#1f2937' : '#ffffff',
+                    color: isDarkMode ? '#f3f4f6' : '#1f2937',
+                });
+            }
+
             completePayment('Cash');
             setShowCashModal(false);
+            setAmountGiven('');
         }
     };
 
@@ -308,12 +338,22 @@ function PaymentContent() {
                         </div>                        {/* Payment Status */}
                         <div className={`mt-6 pt-4 space-y-3 ${isDarkMode ? 'border-t border-slate-600' : 'border-t border-gray-200'}`}>
                             <div className="space-y-2">
-                                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                    PAID: {formatCurrency(total)}
+                                <div className={`text-lg font-bold text-green-600`}>
+                                    ✅ PAID: {formatCurrency(total)}
                                 </div>
-                                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg font-bold">
-                                    Remaining: $0.00
+                                {paymentMethod && (
+                                    <div className={`text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                                        Payment Method: <span className="font-bold">{paymentMethod}</span>
+                                    </div>
+                                )}
+                                <div className="bg-green-500 text-white px-4 py-2 rounded-lg font-bold">
+                                    Payment Complete ✅
                                 </div>
+                                {paymentMethod === 'Cash' && finalAmountGiven && parseFloat(finalAmountGiven) > total && (
+                                    <div className="bg-blue-500 text-white px-4 py-2 rounded-lg font-medium">
+                                        Change Given: {formatCurrency(parseFloat(finalAmountGiven) - total)}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -698,7 +738,7 @@ function PaymentContent() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-3 gap-3 mb-3">
                                 <button
                                     onClick={() => setAmountGiven(total.toFixed(2))}
                                     className={`py-3 px-4 rounded-lg font-medium transition-colors ${isDarkMode
@@ -718,6 +758,18 @@ function PaymentContent() {
                                     ${Math.ceil(total)}.00
                                 </button>
                                 <button
+                                    onClick={() => setAmountGiven('50.00')}
+                                    className={`py-3 px-4 rounded-lg font-medium transition-colors ${isDarkMode
+                                        ? 'bg-blue-600 text-white hover:bg-blue-500'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                >
+                                    $50.00
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                                <button
                                     onClick={() => setAmountGiven('100.00')}
                                     className={`py-3 px-4 rounded-lg font-medium transition-colors ${isDarkMode
                                         ? 'bg-blue-600 text-white hover:bg-blue-500'
@@ -726,7 +778,43 @@ function PaymentContent() {
                                 >
                                     $100.00
                                 </button>
+                                <button
+                                    onClick={() => setAmountGiven('200.00')}
+                                    className={`py-3 px-4 rounded-lg font-medium transition-colors ${isDarkMode
+                                        ? 'bg-blue-600 text-white hover:bg-blue-500'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                >
+                                    $200.00
+                                </button>
+                                <button
+                                    onClick={() => setAmountGiven('')}
+                                    className={`py-3 px-4 rounded-lg font-medium transition-colors ${isDarkMode
+                                        ? 'bg-red-600 text-white hover:bg-red-500'
+                                        : 'bg-red-600 text-white hover:bg-red-700'
+                                        }`}
+                                >
+                                    Clear
+                                </button>
                             </div>
+
+                            {/* Show change calculation */}
+                            {amountGiven && parseFloat(amountGiven) >= total && (
+                                <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-green-800 border border-green-600' : 'bg-green-50 border border-green-200'}`}>
+                                    <div className={`text-lg font-semibold ${isDarkMode ? 'text-green-200' : 'text-green-800'}`}>
+                                        Change: {formatCurrency(parseFloat(amountGiven) - total)}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Show insufficient funds warning */}
+                            {amountGiven && parseFloat(amountGiven) < total && (
+                                <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-red-800 border border-red-600' : 'bg-red-50 border border-red-200'}`}>
+                                    <div className={`text-sm font-medium ${isDarkMode ? 'text-red-200' : 'text-red-800'}`}>
+                                        Insufficient funds. Need {formatCurrency(total - parseFloat(amountGiven))} more.
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex space-x-4">
