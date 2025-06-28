@@ -557,7 +557,7 @@ export default function POSPage() {
             <div className="flex items-center space-x-4">
               {/* <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-600'}`}>
                 👤 Staff Member:
-              // </span> */} //todo
+              // </span> */} todo
               {/* <select
                 value={selectedStaff}
                 onChange={(e) => setSelectedStaff(e.target.value)}
