@@ -113,6 +113,60 @@ export default function POSPage() {
   useEffect(() => {
     fetchServices();
   }, []);
+
+  // Restore cart data from localStorage (when returning from payment page)
+  useEffect(() => {
+    const savedCartData = localStorage.getItem('pos-cart');
+    if (savedCartData) {
+      try {
+        const parsedData = JSON.parse(savedCartData);
+        
+        // Restore if it came from payment page OR if there's existing data to restore
+        if ((parsedData.fromPayment && parsedData.cart && Array.isArray(parsedData.cart)) || 
+            (parsedData.cart && Array.isArray(parsedData.cart) && parsedData.customerExists !== undefined)) {
+          
+          // Restore cart
+          if (parsedData.cart && Array.isArray(parsedData.cart)) {
+            setCart(parsedData.cart);
+          }
+          
+          // Restore customer and vehicle information
+          if (parsedData.customerInfo) {
+            setCustomerName(parsedData.customerInfo.name || '');
+            setCustomerPhone(parsedData.customerInfo.phone || '');
+            setIsVipCustomer(parsedData.customerInfo.isVip || false);
+          }
+          
+          // Restore customer check state
+          if (parsedData.customerExists !== undefined) {
+            setCustomerExists(parsedData.customerExists);
+          }
+          
+          if (parsedData.customerData) {
+            setCustomerData(parsedData.customerData);
+          }
+          
+          // Restore car registration
+          if (parsedData.carRegistration) {
+            setCarRego(parsedData.carRegistration);
+          } else if (parsedData.carInfo && parsedData.carInfo.licensePlate) {
+            setCarRego(parsedData.carInfo.licensePlate);
+          }
+          
+          // Clear the fromPayment flag to prevent re-loading on subsequent visits
+          if (parsedData.fromPayment) {
+            const updatedData = { ...parsedData, fromPayment: false };
+            localStorage.setItem('pos-cart', JSON.stringify(updatedData));
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring cart data:', error);
+        // Clear invalid data
+        localStorage.removeItem('pos-cart');
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
     const discountedTotal = isVipCustomer ? subtotal * 0.9 : subtotal; // 10% discount for VIP
@@ -480,9 +534,20 @@ export default function POSPage() {
         name: customerName.trim(),
         phone: customerPhone.trim(),
         isVip: isVipCustomer,
+        email: customerData?.email || '',
+        address: customerData?.address || '',
+        id: customerData?.id || null
       },
       carRegistration: carRego.trim() || null,
       timestamp: new Date().toISOString(),
+      // Preserve customer check state
+      customerExists: customerExists,
+      customerData: customerData,
+      carInfo: carRego.trim() ? {
+        licensePlate: carRego.trim(),
+        customer: customerName.trim(),
+        time: new Date().toLocaleTimeString()
+      } : null
     };
 
     // Save transaction data to localStorage for payment page

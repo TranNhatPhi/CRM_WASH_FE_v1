@@ -152,11 +152,32 @@ function PaymentContent() {
     const completePayment = (method: string) => {
         setPaymentComplete(true);
         setPaymentMethod(method);
-        // Clear cart from localStorage
+        // Don't clear cart from localStorage yet - wait until user goes back to POS
+        // localStorage.removeItem('pos-cart');
+    };    const handleCompleteSale = () => {
+        // Clear cart when completing sale (going back to POS after payment)
         localStorage.removeItem('pos-cart');
-    }; const handleCompleteSale = () => {
         router.push('/pos');
-    }; const handleBack = () => {
+    };    const handleBackAfterPayment = () => {
+        // Clear cart when going back to POS after successful payment
+        localStorage.removeItem('pos-cart');
+        router.push('/pos');
+    };
+
+    const handleBack = () => {
+        // Preserve cart data when going back to POS for additional services
+        const cartData = {
+            cart: cart,
+            customerInfo: customerInfo,
+            carInfo: carInfo,
+            timestamp: new Date().toISOString(),
+            fromPayment: true, // Flag to indicate this came from payment page
+            // Preserve customer check state for complete restoration
+            customerExists: customerInfo ? true : null,
+            customerData: customerInfo,
+            carRegistration: carInfo?.licensePlate || ''
+        };
+        localStorage.setItem('pos-cart', JSON.stringify(cartData));
         router.push('/pos');
     };
 
@@ -175,7 +196,7 @@ function PaymentContent() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                             <button
-                                onClick={handleBack}
+                                onClick={handleBackAfterPayment}
                                 className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${isDarkMode
                                     ? 'bg-orange-600 hover:bg-orange-500 text-white'
                                     : 'bg-orange-500 hover:bg-orange-600 text-white'
