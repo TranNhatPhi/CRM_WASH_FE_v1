@@ -26,6 +26,8 @@ function PaymentContent() {
     const [showCashModal, setShowCashModal] = useState(false);
     const [amountGiven, setAmountGiven] = useState('');
     const [finalAmountGiven, setFinalAmountGiven] = useState(''); // Store final amount after payment
+    const [paidAmount, setPaidAmount] = useState(0); // Track total amount paid
+    const [remainingAmount, setRemainingAmount] = useState(0); // Track remaining amount
     const [paymentComplete, setPaymentComplete] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('');
     const [isDarkMode, setIsDarkMode] = useState(false);
@@ -60,6 +62,7 @@ function PaymentContent() {
             setSubtotal(subtotalAmount); // Keep original subtotal for display
             setTax(taxAmount);
             setTotal(discountedSubtotal + taxAmount);
+            setRemainingAmount(discountedSubtotal + taxAmount); // Initialize remaining amount
         }
     }, []); const toggleTheme = () => {
         setIsDarkMode(!isDarkMode);
@@ -145,35 +148,69 @@ function PaymentContent() {
 
     const handleCashPayment = async () => {
         const given = parseFloat(amountGiven);
-        if (given >= total) {
-            const change = given - total;
+        const currentRemainingAmount = remainingAmount > 0 ? remainingAmount : total;
 
+        if (given > 0) { // Allow any positive amount
             // Store the final amount given for display in success screen
             setFinalAmountGiven(amountGiven);
 
-            // Show change notification if there's change to give
-            if (change > 0) {
+            // Update paid and remaining amounts
+            const newPaidAmount = paidAmount + given;
+            const newRemainingAmount = total - newPaidAmount;
+
+            setPaidAmount(newPaidAmount);
+            setRemainingAmount(Math.max(0, newRemainingAmount)); // Don't go below 0
+
+            if (given >= currentRemainingAmount || newRemainingAmount <= 0) {
+                // Full payment or overpayment
+                const change = given - currentRemainingAmount;
+
+                if (change > 0) {
+                    const Swal = (await import('sweetalert2')).default;
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Payment Complete!',
+                        html: `
+                            <div style="text-align: center; font-size: 16px;">
+                                <p style="margin: 10px 0;"><strong>Amount Paid:</strong> ${formatCurrency(given)}</p>
+                                <p style="margin: 10px 0;"><strong>Total Paid:</strong> ${formatCurrency(newPaidAmount)}</p>
+                                <p style="margin: 10px 0;"><strong>Sale Total:</strong> ${formatCurrency(total)}</p>
+                                <p style="margin: 15px 0; font-size: 20px; font-weight: bold; color: #10b981;">
+                                    <strong>Change Due:</strong> ${formatCurrency(change)}
+                                </p>
+                            </div>
+                        `,
+                        confirmButtonColor: '#10b981',
+                        confirmButtonText: 'Continue',
+                        background: isDarkMode ? '#1f2937' : '#ffffff',
+                        color: isDarkMode ? '#f3f4f6' : '#1f2937',
+                    });
+                }
+
+                completePayment('Cash');
+            } else {
+                // Partial payment
                 const Swal = (await import('sweetalert2')).default;
                 await Swal.fire({
-                    icon: 'success',
-                    title: 'Payment Successful!',
+                    icon: 'info',
+                    title: 'Partial Payment Received',
                     html: `
                         <div style="text-align: center; font-size: 16px;">
                             <p style="margin: 10px 0;"><strong>Amount Paid:</strong> ${formatCurrency(given)}</p>
+                            <p style="margin: 10px 0;"><strong>Total Paid:</strong> ${formatCurrency(newPaidAmount)}</p>
                             <p style="margin: 10px 0;"><strong>Sale Total:</strong> ${formatCurrency(total)}</p>
-                            <p style="margin: 15px 0; font-size: 20px; font-weight: bold; color: #10b981;">
-                                <strong>Change Due:</strong> ${formatCurrency(change)}
+                            <p style="margin: 15px 0; font-size: 18px; font-weight: bold; color: #f59e0b;">
+                                <strong>Remaining:</strong> ${formatCurrency(newRemainingAmount)}
                             </p>
                         </div>
                     `,
-                    confirmButtonColor: '#10b981',
+                    confirmButtonColor: '#3b82f6',
                     confirmButtonText: 'Continue',
                     background: isDarkMode ? '#1f2937' : '#ffffff',
                     color: isDarkMode ? '#f3f4f6' : '#1f2937',
                 });
             }
 
-            completePayment('Cash');
             setShowCashModal(false);
             setAmountGiven('');
         }
@@ -591,12 +628,17 @@ function PaymentContent() {
                         {/* Payment Status */}
                         <div className={`mt-6 pt-4 space-y-3 ${isDarkMode ? 'border-t border-slate-600' : 'border-t border-gray-200'}`}>
                             <div className="space-y-2">
-                                <div className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                    PAID: $0.00
+                                <div className={`text-lg font-bold ${paidAmount > 0 ? 'text-green-600' : isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    PAID: {formatCurrency(paidAmount)}
                                 </div>
-                                <div className="bg-orange-500 text-white px-4 py-2 rounded-lg font-bold">
-                                    Remaining: {formatCurrency(total)}
+                                <div className={`px-4 py-2 rounded-lg font-bold text-white ${remainingAmount > 0 ? 'bg-orange-500' : 'bg-green-500'}`}>
+                                    {remainingAmount > 0 ? `Remaining: ${formatCurrency(remainingAmount)}` : 'Fully Paid ✅'}
                                 </div>
+                                {paidAmount > 0 && remainingAmount > 0 && (
+                                    <div className={`text-sm ${isDarkMode ? 'text-yellow-400' : 'text-orange-600'}`}>
+                                        📋 Partial payment received. Continue payment for remaining amount.
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -609,8 +651,13 @@ function PaymentContent() {
                             Amount to Pay
                         </h1>
                         <div className="text-5xl font-bold text-green-600 mb-4">
-                            {formatCurrency(total)}
+                            {formatCurrency(remainingAmount > 0 ? remainingAmount : total)}
                         </div>
+                        {paidAmount > 0 && (
+                            <div className={`text-sm mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
+                                Total: {formatCurrency(total)} | Paid: {formatCurrency(paidAmount)}
+                            </div>
+                        )}
                         <button className="text-sm text-blue-600 hover:underline transition-colors">
                             Edit to make a partial payment
                         </button>
@@ -716,8 +763,13 @@ function PaymentContent() {
 
                         <div className="mb-6">
                             <div className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                Amount to pay: <span className="text-green-600">{formatCurrency(total)}</span>
+                                Amount to pay: <span className="text-green-600">{formatCurrency(remainingAmount > 0 ? remainingAmount : total)}</span>
                             </div>
+                            {paidAmount > 0 && (
+                                <div className={`text-sm mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
+                                    Total Bill: {formatCurrency(total)} | Already Paid: {formatCurrency(paidAmount)}
+                                </div>
+                            )}
                             <div className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                 Amount given by customer:
                             </div>
@@ -740,22 +792,22 @@ function PaymentContent() {
 
                             <div className="grid grid-cols-3 gap-3 mb-3">
                                 <button
-                                    onClick={() => setAmountGiven(total.toFixed(2))}
+                                    onClick={() => setAmountGiven((remainingAmount > 0 ? remainingAmount : total).toFixed(2))}
                                     className={`py-3 px-4 rounded-lg font-medium transition-colors ${isDarkMode
                                         ? 'bg-blue-600 text-white hover:bg-blue-500'
                                         : 'bg-blue-600 text-white hover:bg-blue-700'
                                         }`}
                                 >
-                                    {formatCurrency(total)}
+                                    {formatCurrency(remainingAmount > 0 ? remainingAmount : total)}
                                 </button>
                                 <button
-                                    onClick={() => setAmountGiven((Math.ceil(total)).toFixed(2))}
+                                    onClick={() => setAmountGiven((Math.ceil(remainingAmount > 0 ? remainingAmount : total)).toFixed(2))}
                                     className={`py-3 px-4 rounded-lg font-medium transition-colors ${isDarkMode
                                         ? 'bg-blue-600 text-white hover:bg-blue-500'
                                         : 'bg-blue-600 text-white hover:bg-blue-700'
                                         }`}
                                 >
-                                    ${Math.ceil(total)}.00
+                                    ${Math.ceil(remainingAmount > 0 ? remainingAmount : total)}.00
                                 </button>
                                 <button
                                     onClick={() => setAmountGiven('50.00')}
@@ -799,19 +851,22 @@ function PaymentContent() {
                             </div>
 
                             {/* Show change calculation */}
-                            {amountGiven && parseFloat(amountGiven) >= total && (
+                            {amountGiven && parseFloat(amountGiven) >= (remainingAmount > 0 ? remainingAmount : total) && (
                                 <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-green-800 border border-green-600' : 'bg-green-50 border border-green-200'}`}>
                                     <div className={`text-lg font-semibold ${isDarkMode ? 'text-green-200' : 'text-green-800'}`}>
-                                        Change: {formatCurrency(parseFloat(amountGiven) - total)}
+                                        Change: {formatCurrency(parseFloat(amountGiven) - (remainingAmount > 0 ? remainingAmount : total))}
                                     </div>
                                 </div>
                             )}
 
-                            {/* Show insufficient funds warning */}
-                            {amountGiven && parseFloat(amountGiven) < total && (
-                                <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-red-800 border border-red-600' : 'bg-red-50 border border-red-200'}`}>
-                                    <div className={`text-sm font-medium ${isDarkMode ? 'text-red-200' : 'text-red-800'}`}>
-                                        Insufficient funds. Need {formatCurrency(total - parseFloat(amountGiven))} more.
+                            {/* Show partial payment info */}
+                            {amountGiven && parseFloat(amountGiven) > 0 && parseFloat(amountGiven) < (remainingAmount > 0 ? remainingAmount : total) && (
+                                <div className={`mt-4 p-3 rounded-lg ${isDarkMode ? 'bg-yellow-800 border border-yellow-600' : 'bg-yellow-50 border border-yellow-200'}`}>
+                                    <div className={`text-sm font-medium ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
+                                        Partial Payment: {formatCurrency(parseFloat(amountGiven))}
+                                    </div>
+                                    <div className={`text-sm font-medium ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
+                                        Will Remain: {formatCurrency((remainingAmount > 0 ? remainingAmount : total) - parseFloat(amountGiven))}
                                     </div>
                                 </div>
                             )}
@@ -829,15 +884,17 @@ function PaymentContent() {
                             </button>
                             <button
                                 onClick={handleCashPayment}
-                                disabled={!amountGiven || parseFloat(amountGiven) < total}
-                                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${!amountGiven || parseFloat(amountGiven) < total
+                                disabled={!amountGiven || parseFloat(amountGiven) <= 0}
+                                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${!amountGiven || parseFloat(amountGiven) <= 0
                                     ? isDarkMode
                                         ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
                                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    : 'bg-green-600 text-white hover:bg-green-700'
+                                    : parseFloat(amountGiven) >= (remainingAmount > 0 ? remainingAmount : total)
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                             >
-                                Complete Payment
+                                {parseFloat(amountGiven) >= (remainingAmount > 0 ? remainingAmount : total) ? 'Complete Payment' : 'Partial Payment'}
                             </button>
                         </div>
                     </div>
