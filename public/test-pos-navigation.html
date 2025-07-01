@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test POS to Payment Navigation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f3f4f6;
+            border-radius: 5px;
+        }
+
+        .paid {
+            background: #dcfce7;
+            border-left: 4px solid #16a34a;
+        }
+
+        .unpaid {
+            background: #fef3c7;
+            border-left: 4px solid #d97706;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Test POS Dashboard → Payment Navigation</h1>
+    <p>Test xem cart items có hiển thị đúng khi navigate từ POS Dashboard sang Payment page không</p>
+
+    <div>
+        <button onclick="testPaidBooking()">Test Paid Booking (viewOnly=true)</button>
+        <button onclick="testUnpaidBooking()">Test Unpaid Booking (viewOnly=false)</button>
+        <button onclick="clearData()">Clear Data</button>
+        <button onclick="openPayment()">Open Payment Page</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        function testPaidBooking() {
+            // Mô phỏng PAID booking data từ POS Dashboard
+            const paidServiceData = {
+                id: 'booking_paid_123',
+                licensePlate: '11111111',
+                customer: 'Matsuda Itsuki',
+                customerPhone: '11-995-0804',
+                time: '3:02 PM',
+                status: 'finished',
+                paymentStatus: 'paid',
+                total: 106.70,
+                services: ['Hand Wax', 'Leather Clean', 'Interior Steam']
+            };
+
+            // Tạo cart items
+            const cartItems = paidServiceData.services.map((serviceName, index) => ({
+                service: {
+                    id: `service_${index}`,
+                    name: serviceName,
+                    price: paidServiceData.total / paidServiceData.services.length
+                },
+                quantity: 1,
+                subtotal: paidServiceData.total / paidServiceData.services.length
+            }));
+
+            const paidTransactionData = {
+                cart: cartItems,
+                customer: {
+                    name: paidServiceData.customer,
+                    phone: paidServiceData.customerPhone,
+                    vehiclePlate: paidServiceData.licensePlate,
+                    isVIP: false
+                },
+                carInfo: {
+                    licensePlate: paidServiceData.licensePlate,
+                    customer: paidServiceData.customer,
+                    time: paidServiceData.time,
+                    total: paidServiceData.total,
+                    status: paidServiceData.status,
+                    paymentStatus: 'paid',
+                    bookingId: paidServiceData.id,
+                    paidAmount: paidServiceData.total
+                },
+                viewOnly: true
+            };
+
+            localStorage.setItem('pos-cart', JSON.stringify(paidTransactionData));
+
+            document.getElementById('results').innerHTML = `
+                <div class="result paid">
+                    <h3>✅ Paid Booking Data Set</h3>
+                    <p><strong>Customer:</strong> ${paidServiceData.customer} (${paidServiceData.customerPhone})</p>
+                    <p><strong>Vehicle:</strong> ${paidServiceData.licensePlate}</p>
+                    <p><strong>Services:</strong> ${paidServiceData.services.join(', ')}</p>
+                    <p><strong>Total:</strong> $${paidServiceData.total}</p>
+                    <p><strong>Status:</strong> ${paidServiceData.status} | ${paidServiceData.paymentStatus}</p>
+                    <p><strong>Expected:</strong> Shows cart items with ✓ "Đã thanh toán" markers</p>
+                </div>
+            `;
+        }
+
+        function testUnpaidBooking() {
+            // Mô phỏng UNPAID booking data từ POS Dashboard
+            const unpaidServiceData = {
+                id: 'booking_unpaid_456',
+                licensePlate: 'ABC123',
+                customer: 'Nguyễn Văn A',
+                customerPhone: '0901234567',
+                time: '4:15 PM',
+                status: 'pending',
+                paymentStatus: 'unpaid',
+                total: 75.00,
+                services: ['Basic Wash', 'Premium Wax']
+            };
+
+            // Tạo cart items
+            const cartItems = unpaidServiceData.services.map((serviceName, index) => ({
+                service: {
+                    id: `service_${index}`,
+                    name: serviceName,
+                    price: unpaidServiceData.total / unpaidServiceData.services.length
+                },
+                quantity: 1,
+                subtotal: unpaidServiceData.total / unpaidServiceData.services.length
+            }));
+
+            const unpaidTransactionData = {
+                cart: cartItems,
+                customer: {
+                    name: unpaidServiceData.customer,
+                    phone: unpaidServiceData.customerPhone,
+                    vehiclePlate: unpaidServiceData.licensePlate,
+                    isVIP: false
+                },
+                carInfo: {
+                    licensePlate: unpaidServiceData.licensePlate,
+                    customer: unpaidServiceData.customer,
+                    time: unpaidServiceData.time,
+                    total: unpaidServiceData.total,
+                    status: unpaidServiceData.status,
+                    paymentStatus: 'unpaid',
+                    bookingId: unpaidServiceData.id,
+                    remainingAmount: unpaidServiceData.total
+                },
+                viewOnly: false
+            };
+
+            localStorage.setItem('pos-cart', JSON.stringify(unpaidTransactionData));
+
+            document.getElementById('results').innerHTML = `
+                <div class="result unpaid">
+                    <h3>⏳ Unpaid Booking Data Set</h3>
+                    <p><strong>Customer:</strong> ${unpaidServiceData.customer} (${unpaidServiceData.customerPhone})</p>
+                    <p><strong>Vehicle:</strong> ${unpaidServiceData.licensePlate}</p>
+                    <p><strong>Services:</strong> ${unpaidServiceData.services.join(', ')}</p>
+                    <p><strong>Total:</strong> $${unpaidServiceData.total}</p>
+                    <p><strong>Status:</strong> ${unpaidServiceData.status} | ${unpaidServiceData.paymentStatus}</p>
+                    <p><strong>Expected:</strong> Shows cart items normally (no paid markers)</p>
+                </div>
+            `;
+        }
+
+        function clearData() {
+            localStorage.removeItem('pos-cart');
+            document.getElementById('results').innerHTML = `
+                <div class="result">
+                    <h3>🗑️ Data Cleared</h3>
+                    <p>localStorage['pos-cart'] removed</p>
+                </div>
+            `;
+        }
+
+        function openPayment() {
+            window.open('/payment', '_blank');
+        }
+    </script>
+</body>
+
+</html>

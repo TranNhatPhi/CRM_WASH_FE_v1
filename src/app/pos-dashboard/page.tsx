@@ -2,282 +2,186 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { DB, supabase } from '@/lib/supabase-client';
+import SmartWashController from '@/components/SmartWashController';
 
-// Mock data for car wash services
-const carServices = [
-    {
-        id: 1,
-        licensePlate: 'ABC-123',
-        time: '9:30 AM',
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        services: ['Premium Wash', 'Wax'],
-        customer: 'John Doe',
-        total: 45.00
-    },
-    {
-        id: 2,
-        licensePlate: 'XYZ-789',
-        time: '9:15 AM',
-        status: 'in-progress',
-        paymentStatus: 'paid',
-        services: ['Basic Wash'],
-        customer: 'Jane Smith',
-        total: 25.00
-    },
-    {
-        id: 3,
-        licensePlate: 'DEF-456',
-        time: '8:45 AM',
-        status: 'finished',
-        paymentStatus: 'paid',
-        services: ['Deluxe Wash', 'Interior Clean'],
-        customer: 'Mike Johnson',
-        total: 65.00
-    },
-    {
-        id: 4,
-        licensePlate: 'MNO-678',
-        time: '9:45 AM',
-        status: 'in-progress',
-        paymentStatus: 'paid',
-        services: ['Premium Wash'],
-        customer: 'Sarah Wilson',
-        total: 35.00
-    },
-    {
-        id: 5,
-        licensePlate: 'PQR-901',
-        time: '10:00 AM',
-        status: 'pending',
-        paymentStatus: 'paid',
-        services: ['Basic Wash', 'Vacuum'],
-        customer: 'Tom Brown',
-        total: 30.00
-    },
-    {
-        id: 6,
-        licensePlate: 'STU-234',
-        time: '9:00 AM',
-        status: 'finished',
-        paymentStatus: 'unpaid',
-        services: ['Deluxe Wash'],
-        customer: 'Lisa Davis',
-        total: 50.00
-    },
-    {
-        id: 7,
-        licensePlate: 'VWX-567',
-        time: '10:15 AM',
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        services: ['Basic Wash', 'Interior Clean'],
-        customer: 'Robert Garcia',
-        total: 40.00
-    },
-    {
-        id: 8,
-        licensePlate: 'YZA-890',
-        time: '10:30 AM',
-        status: 'in-progress',
-        paymentStatus: 'paid',
-        services: ['Premium Wash', 'Wax', 'Vacuum'],
-        customer: 'Emily Martinez',
-        total: 55.00
-    },
-    {
-        id: 9,
-        licensePlate: 'BCD-123',
-        time: '10:45 AM',
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        services: ['Deluxe Wash', 'Interior Clean'],
-        customer: 'David Wilson',
-        total: 60.00
-    },
-    {
-        id: 10,
-        licensePlate: 'EFG-456',
-        time: '11:00 AM',
-        status: 'finished',
-        paymentStatus: 'paid',
-        services: ['Basic Wash'],
-        customer: 'Jennifer Lee',
-        total: 25.00
-    },
-    {
-        id: 11,
-        licensePlate: 'HIJ-789',
-        time: '11:15 AM',
-        status: 'in-progress',
-        paymentStatus: 'paid',
-        services: ['Premium Wash', 'Interior Clean'],
-        customer: 'Michael Brown',
-        total: 50.00
-    },
-    {
-        id: 12,
-        licensePlate: 'KLM-012',
-        time: '11:30 AM',
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        services: ['Deluxe Wash', 'Wax'],
-        customer: 'Amanda Taylor',
-        total: 55.00
-    },
-    {
-        id: 13,
-        licensePlate: 'NOP-345',
-        time: '11:45 AM',
-        status: 'finished',
-        paymentStatus: 'paid',
-        services: ['Basic Wash', 'Vacuum'],
-        customer: 'Christopher Davis',
-        total: 35.00
-    },
-    {
-        id: 14,
-        licensePlate: 'QRS-678',
-        time: '12:00 PM',
-        status: 'in-progress',
-        paymentStatus: 'paid',
-        services: ['Premium Wash'],
-        customer: 'Jessica Miller',
-        total: 35.00
-    },
-    {
-        id: 15,
-        licensePlate: 'TUV-901',
-        time: '12:15 PM',
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        services: ['Deluxe Wash', 'Interior Clean', 'Wax'],
-        customer: 'Daniel Anderson',
-        total: 70.00
-    },
-    {
-        id: 16,
-        licensePlate: 'WXY-234',
-        time: '12:30 PM',
-        status: 'finished',
-        paymentStatus: 'paid',
-        services: ['Basic Wash', 'Interior Clean'],
-        customer: 'Ashley Rodriguez',
-        total: 40.00
-    },
-    {
-        id: 17,
-        licensePlate: 'ZAB-567',
-        time: '12:45 PM',
-        status: 'in-progress',
-        paymentStatus: 'paid',
-        services: ['Premium Wash', 'Wax'],
-        customer: 'James Thompson',
-        total: 45.00
-    },
-    {
-        id: 18,
-        licensePlate: 'CDE-890',
-        time: '1:00 PM',
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        services: ['Deluxe Wash', 'Vacuum'],
-        customer: 'Michelle White',
-        total: 55.00
-    },
-    {
-        id: 19,
-        licensePlate: 'FGH-123',
-        time: '1:15 PM',
-        status: 'finished',
-        paymentStatus: 'paid',
-        services: ['Basic Wash'],
-        customer: 'Kevin Harris',
-        total: 25.00
-    },
-    {
-        id: 20,
-        licensePlate: 'IJK-456',
-        time: '1:30 PM',
-        status: 'in-progress',
-        paymentStatus: 'paid',
-        services: ['Premium Wash', 'Interior Clean', 'Wax'],
-        customer: 'Stephanie Clark',
-        total: 65.00
-    },
-    {
-        id: 21,
-        licensePlate: 'LMN-789',
-        time: '1:45 PM',
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        services: ['Deluxe Wash'],
-        customer: 'Brian Lewis',
-        total: 50.00
-    },
-    {
-        id: 22,
-        licensePlate: 'OPQ-012',
-        time: '2:00 PM',
-        status: 'finished',
-        paymentStatus: 'paid',
-        services: ['Basic Wash', 'Vacuum', 'Interior Clean'],
-        customer: 'Nicole Walker',
-        total: 45.00
-    },
-    {
-        id: 23,
-        licensePlate: 'RST-345',
-        time: '2:15 PM',
-        status: 'in-progress',
-        paymentStatus: 'paid',
-        services: ['Premium Wash'],
-        customer: 'Anthony Hall',
-        total: 35.00
-    },
-    {
-        id: 24,
-        licensePlate: 'UVW-678',
-        time: '2:30 PM',
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        services: ['Deluxe Wash', 'Wax', 'Interior Clean'],
-        customer: 'Rachel Allen',
-        total: 70.00
-    }, {
-        id: 25,
-        licensePlate: 'XYZ-901',
-        time: '2:45 PM',
-        status: 'finished',
-        paymentStatus: 'paid',
-        services: ['Basic Wash', 'Interior Clean'],
-        customer: 'Mark Young',
-        total: 40.00
-    },
-    {
-        id: 26,
-        licensePlate: 'AAA-999',
-        time: '3:00 PM',
-        status: 'pending',
-        paymentStatus: 'unpaid',
-        services: ['Premium Wash', 'Wax'],
-        customer: 'Jennifer Adams',
-        total: 45.00
-    }
-];
+// Types for our dashboard data
+interface DashboardService {
+    id: string;
+    licensePlate: string;
+    customer: string;
+    time: string;
+    services: string[];
+    total: number;
+    status: 'pending' | 'in-progress' | 'finished';
+    paymentStatus: 'paid' | 'unpaid';
+    customerPhone?: string;
+    vehicleInfo?: {
+        make?: string;
+        model?: string;
+        color?: string;
+    };
+}
 
 export default function POSDashboard() {
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [paymentFilter, setPaymentFilter] = useState('all');
-    const [filteredServices, setFilteredServices] = useState(carServices);
+    const [services, setServices] = useState<DashboardService[]>([]);
+    const [filteredServices, setFilteredServices] = useState<DashboardService[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(8);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
+    // Function to fetch bookings data from Supabase
+    const fetchBookingsData = async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
+
+            // Fetch bookings with customer, vehicle, and booking state data
+            const { data: bookingsData, error: bookingsError } = await supabase
+                .from('bookings')
+                .select(`
+                    id,
+                    date,
+                    total_price,
+                    notes,
+                    createdAt,
+                    updatedAt,
+                    booking_state_id,
+                    customers!bookings_customer_id_fkey (
+                        id,
+                        name,
+                        phone,
+                        email
+                    ),
+                    vehicles!bookings_vehicle_id_fkey (
+                        id,
+                        license_plate,
+                        make,
+                        model,
+                        color
+                    ),
+                    booking_state!bookings_booking_state_id_fkey (
+                        id,
+                        state_name,
+                        description
+                    ),
+                    booking_services!booking_services_booking_id_fkey (
+                        services!booking_services_service_id_fkey (
+                            id,
+                            name,
+                            price
+                        )
+                    )
+                `)
+                .order('createdAt', { ascending: false })
+                .limit(50);
+
+            if (bookingsError) {
+                throw new Error(bookingsError.message);
+            }
+
+            // Transform booking data to dashboard service format
+            const transformedServices: DashboardService[] = bookingsData?.map((booking: any) => {
+                // Get services from booking_services
+                const services = booking.booking_services?.map((bs: any) => bs.services?.name).filter(Boolean) || [];
+
+                // Calculate total from services or use stored total_price
+                const total = booking.total_price ||
+                    booking.booking_services?.reduce((sum: number, bs: any) =>
+                        sum + (bs.services?.price || 0), 0) || 0;
+
+                // Map booking states to UI states
+                const mapStateToUI = (stateName: string) => {
+                    switch (stateName) {
+                        case 'pending':
+                        case 'draft':
+                        case 'confirmed':
+                            return 'pending';
+                        case 'in_progress':
+                        case 'washing':
+                        case 'drying':
+                            return 'in-progress';
+                        case 'finished':
+                        case 'completed':
+                            return 'finished';
+                        case 'cancelled':
+                        case 'no_show':
+                            return 'finished'; // Treat cancelled as finished for UI
+                        default:
+                            return 'pending';
+                    }
+                };
+
+                // Determine payment status based on booking notes or state
+                const determinePaymentStatus = (notes: string, stateName: string) => {
+                    // Check if payment info is in notes
+                    if (notes?.includes('Payment Status: paid')) {
+                        return 'paid';
+                    }
+                    if (notes?.includes('Payment Status: unpaid')) {
+                        return 'unpaid';
+                    }
+
+                    // If booking is in progress or finished, likely paid
+                    if (stateName === 'in_progress' || stateName === 'finished' || stateName === 'completed') {
+                        // Check if there's payment method info in notes
+                        if (notes?.includes('Method:')) {
+                            return 'paid';
+                        }
+                    }
+
+                    // Default to unpaid for pending bookings
+                    return 'unpaid';
+                };
+
+                const paymentStatus = determinePaymentStatus(booking.notes || '', booking.booking_state?.state_name || '');
+
+                return {
+                    id: booking.id.toString(),
+                    licensePlate: booking.vehicles?.license_plate || 'N/A',
+                    customer: booking.customers?.name || 'Unknown Customer',
+                    customerPhone: booking.customers?.phone || '',
+                    time: new Date(booking.createdAt).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    }),
+                    services: services,
+                    total: total,
+                    status: mapStateToUI(booking.booking_state?.state_name || 'pending'),
+                    paymentStatus: paymentStatus,
+                    vehicleInfo: {
+                        make: booking.vehicles?.make || undefined,
+                        model: booking.vehicles?.model || undefined,
+                        color: booking.vehicles?.color || undefined,
+                    }
+                };
+            }) || [];
+
+            setServices(transformedServices);
+        } catch (err) {
+            console.error('Error fetching bookings data:', err);
+            setError(err instanceof Error ? err.message : 'Failed to load data');
+            setServices([]); // Set empty array on error
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Load data on component mount
     useEffect(() => {
-        const filtered = carServices.filter(service => {
+        fetchBookingsData();
+    }, []);
+
+    // Filter services based on search and filter criteria
+    useEffect(() => {
+        const filtered = services.filter((service: DashboardService) => {
             const matchesSearch = service.licensePlate.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 service.customer.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesStatus = statusFilter === 'all' || service.status === statusFilter;
@@ -287,7 +191,7 @@ export default function POSDashboard() {
         });
         setFilteredServices(filtered);
         setCurrentPage(1); // Reset to first page when filters change
-    }, [searchQuery, statusFilter, paymentFilter]);
+    }, [searchQuery, statusFilter, paymentFilter, services]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -363,37 +267,95 @@ export default function POSDashboard() {
     };
 
     const handleCarPayment = (service: any) => {
-        // Create cart data with the services for this car
-        const cartItems = service.services.map((serviceName: string, index: number) => ({
-            service: {
-                id: `service_${index}`,
-                name: serviceName,
-                price: service.total / service.services.length // Distribute total across services
-            },
-            quantity: 1,
-            subtotal: service.total / service.services.length
-        }));
+        console.log('handleCarPayment called with service:', service);
+        console.log('Payment status:', service.paymentStatus);
 
-        // Create transaction data for payment page
-        const transactionData = {
-            cart: cartItems,
-            customer: {
-                name: service.customer,
-                phone: "0123456789", // Default phone if not available
-                vehiclePlate: service.licensePlate,
-                isVIP: false
-            }, carInfo: {
-                licensePlate: service.licensePlate,
-                customer: service.customer,
-                time: service.time,
-                total: service.total,
-                status: service.status,
-                paymentStatus: service.paymentStatus
-            }
-        };
+        // Generate cart items from services (same for both paid and unpaid)
+        let cartItems = [];
 
-        // Save to localStorage for payment page
-        localStorage.setItem('pos-cart', JSON.stringify(transactionData));
+        if (service.services && service.services.length > 0) {
+            console.log('Using actual services from booking');
+            // Use actual services
+            cartItems = service.services.map((serviceName: string, index: number) => ({
+                service: {
+                    id: `service_${index}`,
+                    name: serviceName,
+                    price: service.total / service.services.length // Distribute total across services
+                },
+                quantity: 1,
+                subtotal: service.total / service.services.length
+            }));
+        } else {
+            console.log('No services found, creating fallback service');
+            // Fallback: create a single generic service if no services found
+            cartItems = [{
+                service: {
+                    id: 'service_generic',
+                    name: 'Car Wash Service',
+                    price: service.total || 100 // Use service total or default $100
+                },
+                quantity: 1,
+                subtotal: service.total || 100
+            }];
+        }
+
+        console.log('Generated cart items:', cartItems);
+
+        // Check payment status
+        if (service.paymentStatus === 'paid') {
+            // Already paid - show cart items with paid status
+            const paidTransactionData = {
+                cart: cartItems, // Show cart items for paid bookings
+                customer: {
+                    name: service.customer,
+                    phone: service.customerPhone || "0123456789",
+                    vehiclePlate: service.licensePlate,
+                    isVIP: false
+                },
+                carInfo: {
+                    licensePlate: service.licensePlate,
+                    customer: service.customer,
+                    time: service.time,
+                    total: service.total,
+                    status: service.status,
+                    paymentStatus: 'paid',
+                    bookingId: service.id,
+                    paidAmount: service.total // Full amount already paid
+                },
+                viewOnly: true // Flag to indicate this is view-only mode
+            };
+
+            console.log('Setting as PAID - viewOnly: true with cart items');
+            localStorage.setItem('pos-cart', JSON.stringify(paidTransactionData));
+        } else {
+            console.log('Setting as UNPAID - viewOnly: false');
+
+            // Unpaid - show cart with items for payment
+
+            const unpaidTransactionData = {
+                cart: cartItems,
+                customer: {
+                    name: service.customer,
+                    phone: service.customerPhone || "0123456789",
+                    vehiclePlate: service.licensePlate,
+                    isVIP: false
+                },
+                carInfo: {
+                    licensePlate: service.licensePlate,
+                    customer: service.customer,
+                    time: service.time,
+                    total: service.total,
+                    status: service.status,
+                    paymentStatus: 'unpaid',
+                    bookingId: service.id,
+                    remainingAmount: service.total // Amount still to be paid
+                },
+                viewOnly: false // Flag to indicate payment is still needed
+            };
+
+            console.log('unpaidTransactionData:', unpaidTransactionData);
+            localStorage.setItem('pos-cart', JSON.stringify(unpaidTransactionData));
+        }
 
         // Navigate to payment page
         router.push('/payment');
@@ -608,86 +570,127 @@ export default function POSDashboard() {
                             </div>
                         )}
                     </div>
-                </div>{/* Services Grid */}
+                </div>                {/* Services Grid */}
                 <div className="flex-1 flex flex-col">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1">                        {currentServices.map((service) => (
-                        <div
-                            key={service.id}
-                            onClick={() => handleCarPayment(service)}
-                            className={`rounded-xl border shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer hover:scale-105 ${isDarkMode
-                                ? 'bg-gray-800 border-gray-700 hover:bg-gray-750'
-                                : 'bg-white border-gray-200 hover:bg-gray-50'
-                                }`}
-                        >                                {/* Card Header */}
-                            <div className="p-3 border-b border-gray-200">
-                                <div className="flex items-center justify-between mb-1">
-                                    <h3 className="text-lg font-bold">{service.licensePlate}</h3>
-                                    <div className="flex items-center text-xs text-gray-500">
-                                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {service.time}
-                                    </div>
-                                </div>
-                                <p className="text-xs text-gray-600">{service.customer}</p>
-                                <div className="mt-2 text-xs text-blue-600 font-medium">
-                                    Click to go to Payment →
-                                </div>
+                    {/* Loading State */}
+                    {isLoading && (
+                        <div className="flex-1 flex items-center justify-center">
+                            <div className="text-center">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                                <p className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Loading vehicles...</p>
+                                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Please wait while we fetch the latest data</p>
                             </div>
+                        </div>
+                    )}
 
-                            {/* Card Body */}
-                            <div className="p-3">
-                                <div className="space-y-2">
-                                    {/* Services */}
-                                    <div>
-                                        <p className="text-xs text-gray-500 mb-1">Services:</p>
-                                        <div className="flex flex-wrap gap-1">
-                                            {service.services.map((svc, index) => (
-                                                <span
-                                                    key={index}
-                                                    className={`px-2 py-0.5 text-xs rounded-full ${isDarkMode
-                                                        ? 'bg-gray-700 text-gray-300'
-                                                        : 'bg-gray-100 text-gray-700'
-                                                        }`}
-                                                >
-                                                    {svc}
-                                                </span>
-                                            ))}
+                    {/* Error State */}
+                    {error && !isLoading && (
+                        <div className="flex-1 flex items-center justify-center">
+                            <div className="text-center">
+                                <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                                    <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">Unable to load data</h3>
+                                <p className="text-gray-500 mb-4">{error}</p>
+                                <button
+                                    onClick={fetchBookingsData}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    Try Again
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Services Grid */}
+                    {!isLoading && !error && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 flex-1">{currentServices.map((service) => (
+                            <div
+                                key={service.id}
+                                onClick={() => handleCarPayment(service)}
+                                className={`rounded-xl border shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer hover:scale-105 ${isDarkMode
+                                    ? 'bg-gray-800 border-gray-700 hover:bg-gray-750'
+                                    : 'bg-white border-gray-200 hover:bg-gray-50'
+                                    }`}
+                            >                                {/* Card Header */}
+                                <div className="p-3 border-b border-gray-200">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="text-lg font-bold">{service.licensePlate}</h3>
+                                        <div className="flex items-center text-xs text-gray-500">
+                                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            {service.time}
                                         </div>
                                     </div>
-
-                                    {/* Total */}
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-500">Total:</span>
-                                        <span className="font-bold text-sm">${service.total.toFixed(2)}</span>
+                                    <p className="text-xs text-gray-600">{service.customer}</p>
+                                    <div className="mt-2 text-xs text-blue-600 font-medium">
+                                        Click to go to Payment →
                                     </div>
                                 </div>
-                            </div>                                {/* Card Footer */}
-                            <div className="px-3 pb-3 relative">
-                                {/* Status */}
-                                <div className={`w-full py-2 px-2 rounded-lg text-center text-xs font-medium border ${getStatusColor(service.status)}`}>
-                                    {formatStatus(service.status)}
-                                </div>
 
-                                {/* Payment Status - Partial Overlay */}
-                                {service.paymentStatus === 'unpaid' && (
-                                    <div className={`absolute inset-x-3 top-5 w-auto py-1.5 px-2 rounded-lg text-center text-xs font-bold shadow-lg z-10 ${getPaymentColor(service.paymentStatus)}`}>
-                                        UNPAID
+                                {/* Card Body */}
+                                <div className="p-3">
+                                    <div className="space-y-2">
+                                        {/* Services */}
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-1">Services:</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {service.services.map((svc, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className={`px-2 py-0.5 text-xs rounded-full ${isDarkMode
+                                                            ? 'bg-gray-700 text-gray-300'
+                                                            : 'bg-gray-100 text-gray-700'
+                                                            }`}
+                                                    >
+                                                        {svc}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Total */}
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-gray-500">Total:</span>
+                                            <span className="font-bold text-sm">${service.total.toFixed(2)}</span>
+                                        </div>
                                     </div>
-                                )}
-                            </div></div>
-                    ))}                    </div>
-                </div>{/* Empty State */}
-                {currentServices.length === 0 && (
-                    <div className="text-center py-12">
-                        <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
-                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.034 0-3.9.785-5.291 2.09m8.291-8.09A7.962 7.962 0 0112 9c-2.034 0-3.9-.785-5.291-2.09" />
-                            </svg>
-                        </div>                        <h3 className="text-lg font-medium text-gray-900 mb-2">No services found</h3>
-                        <p className="text-gray-500">Try adjusting your search or filters to find what you're looking for.</p>
-                    </div>
-                )}
+                                </div>                                {/* Card Footer */}
+                                <div className="px-3 pb-3 relative">
+                                    {/* Status */}
+                                    <div className={`w-full py-2 px-2 rounded-lg text-center text-xs font-medium border ${getStatusColor(service.status)}`}>
+                                        {formatStatus(service.status)}
+                                    </div>
+
+                                    {/* Payment Status - Partial Overlay */}
+                                    {service.paymentStatus === 'unpaid' && (
+                                        <div className={`absolute inset-x-3 top-5 w-auto py-1.5 px-2 rounded-lg text-center text-xs font-bold shadow-lg z-10 ${getPaymentColor(service.paymentStatus)}`}>
+                                            UNPAID
+                                        </div>
+                                    )}
+                                </div></div>
+                        ))}
+                        </div>
+                    )}
+
+                    {/* Empty State */}
+                    {!isLoading && !error && currentServices.length === 0 && (
+                        <div className="flex-1 flex items-center justify-center">
+                            <div className="text-center">
+                                <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.034 0-3.9.785-5.291 2.09m8.291-8.09A7.962 7.962 0 0112 9c-2.034 0-3.9-.785-5.291-2.09" />
+                                    </svg>
+                                </div>
+                                <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No services found</h3>
+                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Try adjusting your search or filters to find what you're looking for.</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
