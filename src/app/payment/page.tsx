@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, X, Printer, Gift, Mail, Sun, Moon } from 'lucide-react';
 import { formatCurrency } from '@/utils';
 import { supabase } from '@/lib/supabase-client';
+import { BookingService } from '@/lib/booking-service';
 import Swal from 'sweetalert2/dist/sweetalert2.js';
 
 interface CartItem {
@@ -295,7 +296,77 @@ function PaymentContent() {
             const bookingId = carInfo?.bookingId;
 
             if (bookingId) {
-                console.log('Updating booking status to finished for booking:', bookingId);
+                console.log('Checking payment status before finishing wash for booking:', bookingId);
+
+                // Get current booking data first to check payment status
+                const { data: currentBooking, error: fetchError } = await supabase
+                    .from('bookings')
+                    .select('notes')
+                    .eq('id', bookingId)
+                    .single();
+
+                if (fetchError) {
+                    console.error('Error fetching current booking:', fetchError);
+                    throw fetchError;
+                }
+
+                // Check if payment has been completed
+                const existingNotes = currentBooking?.notes || '';
+                const hasPaymentCompleted = existingNotes.includes('Payment Status: paid') || existingNotes.includes('Method:');
+
+                if (!hasPaymentCompleted) {
+                    // Payment not completed - show confirmation dialog for "pay later" option
+                    const Swal = (await import('sweetalert2')).default;
+                    const result = await Swal.fire({
+                        title: 'Payment Options',
+                        html: `
+                            <div style="text-align: center; font-size: 16px; color: ${isDarkMode ? '#f3f4f6' : '#1f2937'};">
+                                <div style="margin: 15px 0; padding: 12px; background: #fef2f2; border-radius: 8px; border: 1px solid #fecaca; color: #dc2626; font-weight: 600;">
+                                    &#9888;&#65039; Payment has not been completed yet.
+                                </div>
+                                <p style="margin: 15px 0; color: ${isDarkMode ? '#f3f4f6' : '#1f2937'}; font-weight: 500;">Choose an option:</p>
+                                <div style="margin: 20px 0; padding: 15px; background: #fef3cd; border-radius: 8px; border-left: 4px solid #fbbf24; color: #92400e;">
+                                    <strong>Option 1:</strong> Complete payment now before finishing
+                                </div>
+                                <div style="margin: 20px 0; padding: 15px; background: #dbeafe; border-radius: 8px; border-left: 4px solid #3b82f6; color: #1e40af;">
+                                    <strong>Option 2:</strong> Finish wash and allow customer to pay later
+                                </div>
+                            </div>
+                        `,
+                        icon: 'question',
+                        showDenyButton: true,
+                        showCancelButton: true,
+                        confirmButtonText: '&#128176; Complete Payment First',
+                        denyButtonText: '&#9197;&#65039; Finish & Pay Later',
+                        cancelButtonText: '&#10060; Cancel',
+                        confirmButtonColor: '#10b981',
+                        denyButtonColor: '#3b82f6',
+                        cancelButtonColor: '#6b7280',
+                        background: isDarkMode ? '#1f2937' : '#ffffff',
+                        color: isDarkMode ? '#f3f4f6' : '#1f2937',
+                    });
+
+                    if (result.isConfirmed) {
+                        // User chose to complete payment first - don't finish wash
+                        await Swal.fire({
+                            title: 'Complete Payment',
+                            text: 'Please complete the payment using the options above, then try finishing the wash again.',
+                            icon: 'info',
+                            confirmButtonColor: '#3b82f6',
+                            background: isDarkMode ? '#1f2937' : '#ffffff',
+                            color: isDarkMode ? '#f3f4f6' : '#1f2937',
+                        });
+                        return; // Stop execution - don't finish wash
+                    } else if (result.isDenied) {
+                        // User chose to finish wash and pay later - continue with unpaid status
+                        console.log('✅ User chose "pay later" option - proceeding to finish wash with unpaid status');
+                    } else {
+                        // User cancelled
+                        return; // Stop execution
+                    }
+                } else {
+                    console.log('✅ Payment confirmed - proceeding to finish wash for booking:', bookingId);
+                }
 
                 // Update booking status in database
                 const { data: bookingState, error: stateError } = await supabase
@@ -309,13 +380,17 @@ function PaymentContent() {
                     throw stateError;
                 }
 
+                // Preserve existing notes and append finish status
+                const finishStatusNote = `\nStatus updated to finished at ${new Date().toLocaleString()}`;
+                const updatedNotes = existingNotes + finishStatusNote;
+
                 // Update booking with new status and current timestamp
                 const { error: updateError } = await supabase
                     .from('bookings')
                     .update({
                         booking_state_id: bookingState.id,
                         updatedAt: new Date().toISOString(),
-                        notes: `${carInfo?.notes || ''}\nStatus updated to finished at ${new Date().toLocaleString()}`
+                        notes: updatedNotes
                     })
                     .eq('id', bookingId);
 
@@ -326,13 +401,36 @@ function PaymentContent() {
 
                 console.log('Booking status updated successfully');
 
-                // Show success message
+                // Update carInfo with new notes
+                const updatedCarInfo = { ...carInfo, notes: updatedNotes };
+                setCarInfo(updatedCarInfo);
+
+                // Update localStorage
+                const cartData = localStorage.getItem('pos-cart');
+                if (cartData) {
+                    const parsedData = JSON.parse(cartData);
+                    parsedData.carInfo = updatedCarInfo;
+                    localStorage.setItem('pos-cart', JSON.stringify(parsedData));
+                }
+
+                // Show success message with payment status info
+                const finalPaymentStatus = updatedNotes.includes('Payment Status: paid') || updatedNotes.includes('Method:');
                 const Swal = (await import('sweetalert2')).default;
                 await Swal.fire({
                     title: 'Wash Finished!',
-                    text: `Booking #${bookingId} wash has been completed.`,
+                    html: `
+                        <div style="text-align: center; font-size: 16px; color: ${isDarkMode ? '#f3f4f6' : '#1f2937'};">
+                            <p style="margin: 10px 0; color: ${isDarkMode ? '#f3f4f6' : '#1f2937'};"><strong>Booking #${bookingId}</strong> wash has been completed.</p>
+                            <div style="margin: 15px 0; padding: 10px; border-radius: 8px; ${finalPaymentStatus
+                            ? 'background: #d1fae5; color: #065f46;'
+                            : 'background: #fef3cd; color: #92400e;'
+                        }">
+                                Payment Status: ${finalPaymentStatus ? '✅ PAID' : '⏳ UNPAID (Pay Later)'}
+                            </div>
+                        </div>
+                    `,
                     icon: 'success',
-                    timer: 2000,
+                    timer: 3000,
                     showConfirmButton: false
                 });
             }
@@ -439,11 +537,30 @@ function PaymentContent() {
         setPaymentComplete(true);
         setPaymentMethod(method);
 
-        // Update booking in database with payment status
+        // Update booking in database with payment status and create transaction
         try {
             const bookingId = carInfo?.bookingId;
             if (bookingId) {
                 console.log('Updating booking with payment status for booking:', bookingId);
+
+                // Normalize payment method to lowercase for API
+                const normalizedMethod = method.toLowerCase();
+
+                // Create transaction record first
+                console.log('Creating transaction record...');
+                const transactionResult = await BookingService.createTransaction(
+                    bookingId,
+                    total,
+                    normalizedMethod
+                );
+
+                if (transactionResult.success) {
+                    console.log('Transaction created successfully:', transactionResult.transaction);
+                } else {
+                    console.error('Failed to create transaction:', transactionResult.error);
+                    // Don't fail the payment completion if transaction creation fails
+                    // but log the error for debugging
+                }
 
                 // Prepare payment notes
                 const paymentNotes = `Payment Status: paid | Payment Method: ${method} | Amount Paid: $${total} | Payment Date: ${new Date().toLocaleString()}`;
@@ -451,8 +568,7 @@ function PaymentContent() {
 
                 // Replace "Payment Status: unpaid" with new payment status
                 if (updatedNotes.includes('Payment Status: unpaid')) {
-                    updatedNotes = updatedNotes.replace('Payment Status: unpaid', `Payment Status: paid`);
-                    updatedNotes += `\n${paymentNotes}`;
+                    updatedNotes = updatedNotes.replace('Payment Status: unpaid', paymentNotes);
                 } else {
                     updatedNotes = `${updatedNotes}\n${paymentNotes}`;
                 }
@@ -977,7 +1093,24 @@ function PaymentContent() {
                                 <div className="font-medium">
                                     Car Status: {formatStatus(carInfo?.status || 'pending')}
                                 </div>
-                            </div>                            {/* Action Buttons */}
+                            </div>                            {/* Payment Status Indicator for In-Progress */}
+                            {carInfo?.status === 'in-progress' && (
+                                <div className={`p-3 rounded-lg border text-center ${paymentComplete
+                                    ? 'bg-green-100 border-green-200 text-green-800'
+                                    : 'bg-blue-100 border-blue-200 text-blue-800'
+                                    }`}>
+                                    <div className="font-medium text-sm">
+                                        Payment Status: {paymentComplete ? '✅ PAID' : '⏳ PENDING'}
+                                    </div>
+                                    {!paymentComplete && (
+                                        <div className="text-xs mt-1">
+                                            💰 Pay now or finish wash & pay later
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
                             <div className="flex space-x-4 mt-8">
                                 {carInfo?.status === 'pending' && (
                                     <button
@@ -1271,7 +1404,24 @@ function PaymentContent() {
                             <div className="font-medium">
                                 Car Status: {formatStatus(carInfo?.status || 'pending')}
                             </div>
-                        </div>                        {/* Action Buttons */}
+                        </div>                        {/* Payment Status Indicator for In-Progress */}
+                        {carInfo?.status === 'in-progress' && (
+                            <div className={`p-3 rounded-lg border text-center ${paymentComplete
+                                ? 'bg-green-100 border-green-200 text-green-800'
+                                : 'bg-yellow-100 border-yellow-200 text-yellow-800'
+                                }`}>
+                                <div className="font-medium text-sm">
+                                    Payment Status: {paymentComplete ? '✅ PAID' : '⏳ PENDING'}
+                                </div>
+                                {!paymentComplete && (
+                                    <div className="text-xs mt-1">
+                                        Complete payment to finish wash
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
                         <div className="flex space-x-4 mt-6">
                             {carInfo?.status === 'pending' && (
                                 <button

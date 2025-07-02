@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .emoji-test {
+            font-size: 24px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        .warning-box {
+            margin: 15px 0;
+            padding: 12px;
+            background: #fef2f2;
+            border-radius: 8px;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            font-weight: 600;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Emoji Display Test</h1>
+
+    <h2>Individual Emojis:</h2>
+    <div class="emoji-test">⚠️ Warning Icon</div>
+    <div class="emoji-test">💰 Money Icon</div>
+    <div class="emoji-test">⏭️ Fast Forward Icon</div>
+    <div class="emoji-test">❌ X Icon</div>
+
+    <h2>Warning Box (as used in Payment Options):</h2>
+    <div class="warning-box">
+        ⚠️ Payment has not been completed yet.
+    </div>
+
+    <h2>Button Text Examples:</h2>
+    <button
+        style="padding: 10px; margin: 5px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 5px;">
+        💰 Complete Payment First
+    </button>
+    <button
+        style="padding: 10px; margin: 5px; font-size: 16px; background: #3b82f6; color: white; border: none; border-radius: 5px;">
+        ⏭️ Finish & Pay Later
+    </button>
+    <button
+        style="padding: 10px; margin: 5px; font-size: 16px; background: #6b7280; color: white; border: none; border-radius: 5px;">
+        ❌ Cancel
+    </button>
+
+    <h2>Unicode Values:</h2>
+    <div>⚠️ = U+26A0 + U+FE0F (Warning Sign + Variation Selector)</div>
+    <div>💰 = U+1F4B0 (Money Bag)</div>
+    <div>⏭️ = U+23ED + U+FE0F (Next Track Button + Variation Selector)</div>
+    <div>❌ = U+274C (Cross Mark)</div>
+
+    <script>
+        console.log('🧪 Emoji test loaded');
+        console.log('⚠️ Warning:', '⚠️'.length, 'characters');
+        console.log('💰 Money:', '💰'.length, 'characters');
+        console.log('⏭️ Next:', '⏭️'.length, 'characters');
+        console.log('❌ Cross:', '❌'.length, 'characters');
+    </script>
+</body>
+
+</html>

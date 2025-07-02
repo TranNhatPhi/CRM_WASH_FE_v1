@@ -120,17 +120,19 @@ export default function POSDashboard() {
 
                 // Determine payment status based on booking notes or state
                 const determinePaymentStatus = (notes: string, stateName: string) => {
-                    // Check if payment info is in notes
+                    // Priority: Check if payment was completed (paid status overrides unpaid)
                     if (notes?.includes('Payment Status: paid')) {
                         return 'paid';
                     }
+
+                    // Check for explicit unpaid status
                     if (notes?.includes('Payment Status: unpaid')) {
                         return 'unpaid';
                     }
 
-                    // If booking is in progress or finished, likely paid
+                    // If booking is in progress or finished, check for payment method
                     if (stateName === 'in_progress' || stateName === 'finished' || stateName === 'completed') {
-                        // Check if there's payment method info in notes
+                        // Check if there's payment method info in notes (indicating payment was made)
                         if (notes?.includes('Method:')) {
                             return 'paid';
                         }
@@ -665,8 +667,10 @@ export default function POSDashboard() {
                                         {formatStatus(service.status)}
                                     </div>
 
-                                    {/* Payment Status - Partial Overlay */}
-                                    {service.paymentStatus === 'unpaid' && (
+                                    {/* Payment Status - Show UNPAID for started but unpaid bookings */}
+                                    {/* Show UNPAID for in-progress and finished unpaid bookings only */}
+                                    {/* Hide for pending bookings and all paid bookings */}
+                                    {service.paymentStatus === 'unpaid' && (service.status === 'in-progress' || service.status === 'finished') && (
                                         <div className={`absolute inset-x-3 top-5 w-auto py-1.5 px-2 rounded-lg text-center text-xs font-bold shadow-lg z-10 ${getPaymentColor(service.paymentStatus)}`}>
                                             UNPAID
                                         </div>

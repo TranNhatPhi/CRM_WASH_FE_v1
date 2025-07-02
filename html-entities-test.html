@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Entities Emoji Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .test-item {
+            font-size: 18px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        .warning-box {
+            margin: 15px 0;
+            padding: 12px;
+            background: #fef2f2;
+            border-radius: 8px;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            font-weight: 600;
+            font-size: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>HTML Entities Emoji Test</h1>
+
+    <h2>Original Emojis vs HTML Entities:</h2>
+
+    <div class="test-item">
+        <strong>Warning Sign:</strong><br>
+        Original: ⚠️<br>
+        HTML Entity: &#9888;&#65039;
+    </div>
+
+    <div class="test-item">
+        <strong>Money Bag:</strong><br>
+        Original: 💰<br>
+        HTML Entity: &#128176;
+    </div>
+
+    <div class="test-item">
+        <strong>Next Track:</strong><br>
+        Original: ⏭️<br>
+        HTML Entity: &#9197;&#65039;
+    </div>
+
+    <div class="test-item">
+        <strong>Cross Mark:</strong><br>
+        Original: ❌<br>
+        HTML Entity: &#10060;
+    </div>
+
+    <h2>Warning Box with HTML Entity:</h2>
+    <div class="warning-box">
+        &#9888;&#65039; Payment has not been completed yet.
+    </div>
+
+    <h2>Button Examples with HTML Entities:</h2>
+    <button
+        style="padding: 10px; margin: 5px; font-size: 16px; background: #10b981; color: white; border: none; border-radius: 5px;">
+        &#128176; Complete Payment First
+    </button>
+    <button
+        style="padding: 10px; margin: 5px; font-size: 16px; background: #3b82f6; color: white; border: none; border-radius: 5px;">
+        &#9197;&#65039; Finish & Pay Later
+    </button>
+    <button
+        style="padding: 10px; margin: 5px; font-size: 16px; background: #6b7280; color: white; border: none; border-radius: 5px;">
+        &#10060; Cancel
+    </button>
+
+    <h2>Unicode Info:</h2>
+    <ul>
+        <li>&#9888; = U+26A0 (Warning Sign)</li>
+        <li>&#65039; = U+FE0F (Variation Selector-16, makes it emoji-style)</li>
+        <li>&#128176; = U+1F4B0 (Money Bag)</li>
+        <li>&#9197; = U+23ED (Next Track Button)</li>
+        <li>&#10060; = U+274C (Cross Mark)</li>
+    </ul>
+
+    <script>
+        console.log('🧪 HTML Entities test loaded');
+
+        // Test if entities render correctly
+        const testDiv = document.createElement('div');
+        testDiv.innerHTML = '&#9888;&#65039;';
+        document.body.appendChild(testDiv);
+
+        setTimeout(() => {
+            console.log('Entity content:', testDiv.textContent);
+            const rect = testDiv.getBoundingClientRect();
+            console.log('Entity dimensions:', rect.width, 'x', rect.height);
+        }, 100);
+    </script>
+</body>
+
+</html>

@@ -54,11 +54,10 @@ async function handlePOST(request: NextRequest) {
         const sanitizedData = {
             customer_id: sanitizeNumericInput(body.customer_id),
             booking_id: sanitizeNumericInput(body.booking_id) || null,
+            membership_id: sanitizeNumericInput(body.membership_id) || null,
             amount: sanitizeNumericInput(body.amount),
             payment_method: sanitizeInput(body.payment_method),
-            status: sanitizeInput(body.status || 'completed'),
-            description: sanitizeInput(body.description || ''),
-            notes: sanitizeInput(body.notes || '')
+            status: sanitizeInput(body.status || 'completed')
         };
 
         // Additional validation
@@ -120,6 +119,10 @@ async function handlePUT(request: NextRequest) {
             sanitizedData.booking_id = sanitizeNumericInput(updateData.booking_id);
         }
 
+        if (updateData.membership_id !== undefined) {
+            sanitizedData.membership_id = sanitizeNumericInput(updateData.membership_id);
+        }
+
         if (updateData.amount !== undefined) {
             sanitizedData.amount = sanitizeNumericInput(updateData.amount);
             if (sanitizedData.amount !== null && sanitizedData.amount <= 0) {
@@ -141,14 +144,6 @@ async function handlePUT(request: NextRequest) {
             if (!validStatuses.includes(sanitizedData.status)) {
                 throw new ValidationError('Invalid status');
             }
-        }
-
-        if (updateData.description !== undefined) {
-            sanitizedData.description = sanitizeInput(updateData.description);
-        }
-
-        if (updateData.notes !== undefined) {
-            sanitizedData.notes = sanitizeInput(updateData.notes);
         }
 
         const { data: transaction, error } = await DB.transactions.update(parseInt(id), sanitizedData);
