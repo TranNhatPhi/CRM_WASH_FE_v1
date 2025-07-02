@@ -2,11 +2,28 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, X, Printer, Gift, Mail, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, X, Printer, Gift, Mail, Sun, Moon, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/utils';
 import { supabase } from '@/lib/supabase-client';
 import { BookingService } from '@/lib/booking-service';
+import { sendBookingStatusSMS } from '@/lib/sms-notification-service';
 import Swal from 'sweetalert2/dist/sweetalert2.js';
+
+// Debug logging function
+function debugLog(message: string, data?: any) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `[${timestamp}] ${message}`;
+    console.log(logMessage, data || '');
+
+    // Also store in localStorage for external monitoring
+    try {
+        const existingLogs = JSON.parse(localStorage.getItem('payment-debug-logs') || '[]');
+        existingLogs.push(logMessage + (data ? ` ${JSON.stringify(data)}` : ''));
+        localStorage.setItem('payment-debug-logs', JSON.stringify(existingLogs));
+    } catch (e) {
+        // Ignore localStorage errors
+    }
+}
 
 interface CartItem {
     service: {
@@ -31,6 +48,9 @@ function PaymentContent() {
     const [finalAmountGiven, setFinalAmountGiven] = useState(''); // Store final amount after payment
     const [paidAmount, setPaidAmount] = useState(0); // Track total amount paid
     const [remainingAmount, setRemainingAmount] = useState(0); // Track remaining amount
+    // Loading states for wash operations
+    const [isStartingWash, setIsStartingWash] = useState(false);
+    const [isFinishingWash, setIsFinishingWash] = useState(false);
     const [paymentComplete, setPaymentComplete] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('');
     const [isDarkMode, setIsDarkMode] = useState(false);
@@ -146,8 +166,10 @@ function PaymentContent() {
 
     // Function to update car status
     const updateCarStatus = (newStatus: string) => {
+        console.log('🔄 updateCarStatus called with status:', newStatus);
         if (carInfo) {
             const updatedCarInfo = { ...carInfo, status: newStatus };
+            console.log('🔄 Updated carInfo:', updatedCarInfo);
             setCarInfo(updatedCarInfo);
 
             // Also update localStorage to persist the change
@@ -156,12 +178,72 @@ function PaymentContent() {
                 const parsedData = JSON.parse(cartData);
                 parsedData.carInfo = updatedCarInfo;
                 localStorage.setItem('pos-cart', JSON.stringify(parsedData));
+                console.log('🔄 Updated localStorage with new status:', newStatus);
             }
+        } else {
+            console.log('⚠️ No carInfo found, cannot update status');
         }
     };
 
     // Handler for Start WASH button
     const handleStartWash = async () => {
+        if (isStartingWash) return; // Prevent multiple clicks
+
+        // Show confirmation modal first
+        const Swal = (await import('sweetalert2')).default;
+        const result = await Swal.fire({
+            title: 'Start Car Wash?',
+            html: `
+                <div style="text-align: center; font-size: 16px; color: ${isDarkMode ? '#f3f4f6' : '#1f2937'};">
+                    <div style="margin: 15px 0; padding: 12px; background: #dbeafe; border-radius: 8px; border: 1px solid #93c5fd; color: #1e40af; font-weight: 600;">
+                        🚗 Are you ready to start the car wash?
+                    </div>
+                    <p style="margin: 15px 0; color: ${isDarkMode ? '#f3f4f6' : '#1f2937'};">
+                        This will begin the washing process and update the status to "In Progress".
+                    </p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '🚀 Start Wash',
+            cancelButtonText: '❌ Cancel',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#6b7280',
+            background: isDarkMode ? '#1f2937' : '#ffffff',
+            color: isDarkMode ? '#f3f4f6' : '#1f2937',
+            // Allow closing by clicking outside or pressing ESC
+            allowOutsideClick: true,
+            allowEscapeKey: true
+        });
+
+        // If user cancelled or clicked outside, don't proceed
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        console.log('🔄 Setting isStartingWash to true');
+        setIsStartingWash(true);
+
+        // Add a small delay to see the spinner
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        debugLog('🚀 handleStartWash called');
+        debugLog('📋 Current state for START WASH', {
+            customerInfo,
+            carInfo,
+            cart,
+            total
+        });
+
+        // Check environment variables
+        debugLog('🔧 Environment check', {
+            NODE_ENV: process.env.NODE_ENV,
+            hasNEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+            hasNEXT_PUBLIC_SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            hasNEXT_PUBLIC_SUPABASE_URL_SMS: !!process.env.NEXT_PUBLIC_SUPABASE_URL_SMS,
+            hasNEXT_PUBLIC_SUPABASE_ANON_KEY_SMS: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_SMS
+        });
+
         try {
             let bookingId = carInfo?.bookingId;
 
@@ -239,35 +321,125 @@ function PaymentContent() {
 
                 console.log('Booking status updated successfully');
 
-                // Show success message
+                // Send SMS notification to customer about wash starting
+                debugLog('🚀 SMS SECTION REACHED - Starting SMS notification process...');
+                debugLog('📋 Initial SMS data check', {
+                    'customerInfo?.phone': customerInfo?.phone,
+                    'carInfo?.customer': carInfo?.customer,
+                    'carInfo?.licensePlate': carInfo?.licensePlate,
+                    'bookingId': bookingId,
+                    'customerInfo full': customerInfo,
+                    'carInfo full': carInfo
+                });
+
+                try {
+                    debugLog('📱 Inside SMS try block...');
+                    let customerPhone = customerInfo?.phone;
+                    let customerName = carInfo?.customer;
+                    let licensePlate = carInfo?.licensePlate;
+
+                    debugLog('📊 SMS variables set', {
+                        customerPhone,
+                        customerName,
+                        licensePlate
+                    });
+
+                    // If we don't have phone number, try to get it from database
+                    if (!customerPhone && bookingId) {
+                        console.log('📱 No phone in customerInfo, fetching from database...');
+
+                        const { data: bookingWithCustomer, error: fetchError } = await supabase
+                            .from('bookings')
+                            .select(`
+                                customers (
+                                    name,
+                                    phone
+                                ),
+                                vehicles (
+                                    license_plate
+                                )
+                            `)
+                            .eq('id', bookingId)
+                            .single();
+
+                        if (!fetchError && bookingWithCustomer) {
+                            customerPhone = (bookingWithCustomer.customers as any)?.phone;
+                            customerName = (bookingWithCustomer.customers as any)?.name || customerName;
+                            licensePlate = (bookingWithCustomer.vehicles as any)?.license_plate || licensePlate;
+
+                            console.log('📱 Fetched customer data:', {
+                                name: customerName,
+                                phone: customerPhone,
+                                licensePlate: licensePlate
+                            });
+                        }
+                    }
+
+                    if (customerName && licensePlate && customerPhone) {
+                        debugLog('📱 Sending SMS notification for wash start...');
+                        debugLog('📱 Final SMS data', {
+                            customerName,
+                            licensePlate,
+                            customerPhone,
+                            bookingId
+                        });
+
+                        const smsResult = await sendBookingStatusSMS(
+                            customerName,
+                            licensePlate,
+                            customerPhone,
+                            'in-progress',
+                            bookingId?.toString()
+                        );
+
+                        if (smsResult.success) {
+                            debugLog('✅ SMS sent successfully for wash start');
+                        } else {
+                            debugLog('❌ SMS failed for wash start', smsResult.error);
+                        }
+                    } else {
+                        debugLog('⚠️ Missing customer info for SMS', {
+                            customer: customerName,
+                            licensePlate: licensePlate,
+                            phone: customerPhone,
+                            customerInfo: customerInfo,
+                            carInfo: carInfo
+                        });
+                    }
+                } catch (smsError) {
+                    debugLog('❌ Failed to send SMS for wash start', smsError);
+                    debugLog('🔍 SMS Error details', {
+                        error: smsError
+                    });
+                    // Don't block the workflow if SMS fails
+                }
+
+                // Update local state first
+                updateCarStatus('in-progress');
+
+                // Show brief success message and auto-redirect
                 const Swal = (await import('sweetalert2')).default;
-                const result = await Swal.fire({
+                await Swal.fire({
                     title: 'Wash Started!',
                     html: `
                         <div style="text-align: center; font-size: 16px;">
                             <p><strong>Booking #${bookingId}</strong></p>
                             <p>Wash has been started successfully!</p>
-                            <p style="margin-top: 15px;">You can view this booking in the POS Dashboard.</p>
+                            <p style="margin-top: 15px; color: #10b981; font-weight: 600;">Redirecting to POS Dashboard...</p>
                         </div>
                     `,
                     icon: 'success',
-                    showCancelButton: true,
-                    confirmButtonText: 'Go to Dashboard',
-                    cancelButtonText: 'Stay Here',
-                    confirmButtonColor: '#10b981'
+                    timer: 2000,
+                    showConfirmButton: false,
+                    background: isDarkMode ? '#1f2937' : '#ffffff',
+                    color: isDarkMode ? '#f3f4f6' : '#1f2937',
                 });
 
-                // If user wants to go to dashboard
-                if (result.isConfirmed) {
-                    // Clear cart and go to dashboard
-                    localStorage.removeItem('pos-cart');
-                    router.push('/pos-dashboard');
-                    return; // Exit early
-                }
+                // Clear cart and auto-redirect to dashboard
+                localStorage.removeItem('pos-cart');
+                router.push('/pos-dashboard');
+                return; // Exit early
             }
-
-            // Update local state
-            updateCarStatus('in-progress');
         } catch (error) {
             console.error('Error starting wash:', error);
 
@@ -287,13 +459,33 @@ function PaymentContent() {
                 icon: 'error',
                 confirmButtonText: 'OK'
             });
+        } finally {
+            console.log('🔄 Setting isStartingWash to false');
+            setIsStartingWash(false);
         }
     };
 
     // Handler for Finish WASH button
     const handleFinishWash = async () => {
+        if (isFinishingWash) return; // Prevent multiple clicks
+
+        console.log('🔄 Setting isFinishingWash to true');
+        setIsFinishingWash(true);
+
+        // Add a small delay to see the spinner
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        debugLog('🏁 handleFinishWash called');
+        debugLog('📋 Current state for finish', {
+            customerInfo,
+            carInfo,
+            cart,
+            total
+        });
+
         try {
             const bookingId = carInfo?.bookingId;
+            debugLog('📊 Booking ID for finish', { bookingId });
 
             if (bookingId) {
                 console.log('Checking payment status before finishing wash for booking:', bookingId);
@@ -401,8 +593,98 @@ function PaymentContent() {
 
                 console.log('Booking status updated successfully');
 
-                // Update carInfo with new notes
-                const updatedCarInfo = { ...carInfo, notes: updatedNotes };
+                // Send SMS notification to customer about finished wash
+                debugLog('🚀 SMS SECTION REACHED - Starting SMS notification for FINISHED...');
+                debugLog('📋 Initial finish SMS data check', {
+                    'customerInfo?.phone': customerInfo?.phone,
+                    'carInfo?.customer': carInfo?.customer,
+                    'carInfo?.licensePlate': carInfo?.licensePlate,
+                    'bookingId': bookingId,
+                    'customerInfo full': customerInfo,
+                    'carInfo full': carInfo
+                });
+
+                try {
+                    debugLog('📱 Inside finish SMS try block...');
+                    let customerPhone = customerInfo?.phone;
+                    let customerName = carInfo?.customer;
+                    let licensePlate = carInfo?.licensePlate;
+
+                    debugLog('📊 Finish SMS variables set', {
+                        customerPhone,
+                        customerName,
+                        licensePlate
+                    });
+
+                    // If we don't have phone number, try to get it from database
+                    if (!customerPhone && bookingId) {
+                        console.log('📱 No phone in customerInfo, fetching from database...');
+
+                        const { data: bookingWithCustomer, error: fetchError } = await supabase
+                            .from('bookings')
+                            .select(`
+                                customers (
+                                    name,
+                                    phone
+                                ),
+                                vehicles (
+                                    license_plate
+                                )
+                            `)
+                            .eq('id', bookingId)
+                            .single();
+
+                        if (!fetchError && bookingWithCustomer) {
+                            customerPhone = (bookingWithCustomer.customers as any)?.phone;
+                            customerName = (bookingWithCustomer.customers as any)?.name || customerName;
+                            licensePlate = (bookingWithCustomer.vehicles as any)?.license_plate || licensePlate;
+
+                            console.log('📱 Fetched customer data:', {
+                                name: customerName,
+                                phone: customerPhone,
+                                licensePlate: licensePlate
+                            });
+                        }
+                    }
+
+                    if (customerName && licensePlate && customerPhone) {
+                        debugLog('📱 Sending SMS notification for finished wash...');
+                        debugLog('📱 Final finish SMS data', {
+                            customerName,
+                            licensePlate,
+                            customerPhone,
+                            bookingId
+                        });
+
+                        const smsResult = await sendBookingStatusSMS(
+                            customerName,
+                            licensePlate,
+                            customerPhone,
+                            'finished',
+                            bookingId?.toString()
+                        );
+
+                        if (smsResult.success) {
+                            debugLog('✅ SMS sent successfully for finished wash');
+                        } else {
+                            debugLog('❌ SMS failed for finished wash', smsResult.error);
+                        }
+                    } else {
+                        debugLog('⚠️ Missing customer info for finish SMS', {
+                            customer: customerName,
+                            licensePlate: licensePlate,
+                            phone: customerPhone,
+                            customerInfo: customerInfo,
+                            carInfo: carInfo
+                        });
+                    }
+                } catch (smsError) {
+                    console.error('❌ Failed to send SMS for finished wash:', smsError);
+                    // Don't block the workflow if SMS fails
+                }
+
+                // Update carInfo with new notes AND status
+                const updatedCarInfo = { ...carInfo, notes: updatedNotes, status: 'finished' };
                 setCarInfo(updatedCarInfo);
 
                 // Update localStorage
@@ -435,8 +717,9 @@ function PaymentContent() {
                 });
             }
 
-            // Update local state
+            // Update local state - Now we can call this to ensure it's set
             updateCarStatus('finished');
+
         } catch (error) {
             console.error('Error finishing wash:', error);
 
@@ -447,6 +730,9 @@ function PaymentContent() {
                 text: 'Failed to finish wash. Please try again.',
                 icon: 'error'
             });
+        } finally {
+            console.log('🔄 Setting isFinishingWash to false');
+            setIsFinishingWash(false);
         }
     };
 
@@ -1115,17 +1401,41 @@ function PaymentContent() {
                                 {carInfo?.status === 'pending' && (
                                     <button
                                         onClick={handleStartWash}
-                                        className="flex-1 py-4 text-xl font-bold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all duration-200 hover:scale-105 shadow-lg"
+                                        disabled={isStartingWash}
+                                        className={`flex-1 py-4 text-xl font-bold rounded-lg transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${isStartingWash
+                                            ? 'bg-green-400 cursor-not-allowed'
+                                            : 'bg-green-600 hover:bg-green-700 hover:scale-105'
+                                            } text-white`}
                                     >
-                                        Start WASH
+                                        {(() => {
+                                            console.log('🎯 Button render - isStartingWash:', isStartingWash);
+                                            return isStartingWash ? (
+                                                <>
+                                                    <span>Starting Wash...</span>
+                                                </>
+                                            ) : (
+                                                'Start WASH'
+                                            );
+                                        })()}
                                     </button>
                                 )}
                                 {carInfo?.status === 'in-progress' && (
                                     <button
                                         onClick={handleFinishWash}
-                                        className="flex-1 py-4 text-xl font-bold rounded-lg bg-orange-600 hover:bg-orange-700 text-white transition-all duration-200 hover:scale-105 shadow-lg"
+                                        disabled={isFinishingWash}
+                                        className={`flex-1 py-4 text-xl font-bold rounded-lg transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${isFinishingWash
+                                            ? 'bg-orange-400 cursor-not-allowed'
+                                            : 'bg-orange-600 hover:bg-orange-700 hover:scale-105'
+                                            } text-white`}
                                     >
-                                        Finish WASH
+                                        {isFinishingWash ? (
+                                            <>
+                                                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin spinner"></div>
+                                                <span>Finishing Wash...</span>
+                                            </>
+                                        ) : (
+                                            'Finish WASH'
+                                        )}
                                     </button>
                                 )}
                                 {carInfo?.status === 'finished' && (
@@ -1140,9 +1450,20 @@ function PaymentContent() {
                                     <>
                                         <button
                                             onClick={handleStartWash}
-                                            className="flex-1 py-4 text-xl font-bold rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all duration-200 hover:scale-105 shadow-lg"
+                                            disabled={isStartingWash}
+                                            className={`flex-1 py-4 text-xl font-bold rounded-lg transition-all duration-200 shadow-lg flex items-center justify-center gap-2 ${isStartingWash
+                                                ? 'bg-green-400 cursor-not-allowed'
+                                                : 'bg-green-600 hover:bg-green-700 hover:scale-105'
+                                                } text-white`}
                                         >
-                                            Start WASH
+                                            {isStartingWash ? (
+                                                <>
+                                                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin spinner"></div>
+                                                    <span>Starting Wash...</span>
+                                                </>
+                                            ) : (
+                                                'Start WASH'
+                                            )}
                                         </button>
                                         <button
                                             onClick={handleCompleteSale}
