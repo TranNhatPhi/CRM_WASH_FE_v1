@@ -10,10 +10,10 @@ export function useServicePreloader() {
     const preloadServices = async () => {
       try {
         const serviceLoader = ServiceLoader.getInstance();
-        
+
         // Preload services in background
         await serviceLoader.loadServices();
-        
+
         setIsPreloaded(true);
         console.log('Services preloaded successfully');
       } catch (error) {
@@ -58,7 +58,7 @@ export function useServiceCache() {
       // Clear service worker cache
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         const messageChannel = new MessageChannel();
-        
+
         messageChannel.port1.onmessage = (event) => {
           if (event.data?.type === 'CACHE_CLEARED') {
             console.log('Service worker cache cleared');
@@ -82,7 +82,7 @@ export function useServiceCache() {
     try {
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         const messageChannel = new MessageChannel();
-        
+
         messageChannel.port1.onmessage = (event) => {
           if (event.data?.type === 'SERVICES_PRELOADED') {
             console.log('Background preload completed');

@@ -64,9 +64,9 @@ self.addEventListener('activate', (event) => {
       const cacheNames = await caches.keys();
       await Promise.all(
         cacheNames
-          .filter(cacheName => 
-            cacheName !== STATIC_CACHE_NAME && 
-            cacheName !== API_CACHE_NAME && 
+          .filter(cacheName =>
+            cacheName !== STATIC_CACHE_NAME &&
+            cacheName !== API_CACHE_NAME &&
             cacheName !== CACHE_NAME
           )
           .map(cacheName => caches.delete(cacheName))
@@ -101,11 +101,11 @@ self.addEventListener('fetch', (event) => {
   // Handle other API requests with network-first strategy
   else if (url.pathname.startsWith('/api/')) {
     event.respondWith(handleApiRequest(request));
-  } 
+  }
   // Handle Next.js assets with cache-first
   else if (url.pathname.startsWith('/_next/')) {
     event.respondWith(handleAssetRequest(request));
-  } 
+  }
   // Handle page navigation
   else {
     // Pages - Network First with offline fallback
@@ -125,7 +125,7 @@ async function handleApiRequest(request) {
     if (networkResponse.ok) {
       const responseClone = networkResponse.clone();
       const responseBody = await responseClone.text();
-      
+
       const responseWithTime = new Response(responseBody, {
         status: networkResponse.status,
         statusText: networkResponse.statusText,
@@ -134,7 +134,7 @@ async function handleApiRequest(request) {
           'sw-cache-time': Date.now().toString()
         }
       });
-      
+
       apiCache.put(request, responseWithTime);
     }
 
@@ -231,28 +231,28 @@ async function handleServicesRequest(request) {
   try {
     // Try cache first for instant loading
     const cachedResponse = await apiCache.match(request);
-    
+
     if (cachedResponse) {
       // Check cache age
       const cacheDate = cachedResponse.headers.get('sw-cache-time');
       const now = Date.now();
       const cacheAge = cacheDate ? now - parseInt(cacheDate) : Infinity;
-      
+
       // If cache is less than 5 minutes old, return immediately
       if (cacheAge < 5 * 60 * 1000) {
         console.log('Serving services from fresh cache');
         return cachedResponse;
       }
-      
+
       // Cache is stale, update in background but return cached version
       console.log('Serving services from stale cache, updating in background');
-      
+
       // Background update (don't await)
       fetch(request).then(async (networkResponse) => {
         if (networkResponse.ok) {
           const responseClone = networkResponse.clone();
           const responseBody = await responseClone.text();
-          
+
           const responseWithTime = new Response(responseBody, {
             status: networkResponse.status,
             statusText: networkResponse.statusText,
@@ -261,25 +261,25 @@ async function handleServicesRequest(request) {
               'sw-cache-time': Date.now().toString()
             }
           });
-          
+
           apiCache.put(request, responseWithTime);
           console.log('Background update completed for services');
         }
       }).catch(error => {
         console.warn('Background update failed:', error);
       });
-      
+
       return cachedResponse;
     }
-    
+
     // No cache available, fetch from network
     console.log('No cache available, fetching services from network');
     const networkResponse = await fetch(request);
-    
+
     if (networkResponse.ok) {
       const responseClone = networkResponse.clone();
       const responseBody = await responseClone.text();
-      
+
       const responseWithTime = new Response(responseBody, {
         status: networkResponse.status,
         statusText: networkResponse.statusText,
@@ -288,22 +288,22 @@ async function handleServicesRequest(request) {
           'sw-cache-time': Date.now().toString()
         }
       });
-      
+
       apiCache.put(request, responseWithTime);
       console.log('Services fetched and cached from network');
     }
-    
+
     return networkResponse;
   } catch (error) {
     console.log('Network failed for services, trying any cached version:', error);
-    
+
     // Network failed, try to return any cached version (even if stale)
     const cachedResponse = await apiCache.match(request);
     if (cachedResponse) {
       console.log('Returning stale cached services due to network failure');
       return cachedResponse;
     }
-    
+
     // No cache available, return empty services response
     return new Response(
       JSON.stringify({
@@ -417,7 +417,7 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
+
   if (event.data && event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
       Promise.all([
@@ -433,7 +433,7 @@ self.addEventListener('message', (event) => {
       })
     );
   }
-  
+
   if (event.data && event.data.type === 'PRELOAD_SERVICES') {
     event.waitUntil(
       handleServicesRequest(new Request('/api/services'))
@@ -456,7 +456,7 @@ self.addEventListener('message', (event) => {
         })
     );
   }
-  
+
   if (event.data && event.data.type === 'REFRESH_SERVICES') {
     event.waitUntil(
       // Clear services cache and fetch fresh

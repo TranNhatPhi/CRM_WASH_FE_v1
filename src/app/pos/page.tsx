@@ -7,7 +7,6 @@ import { formatCurrency } from '@/utils';
 import { Minus, Plus, X, ShoppingCart, CreditCard, Sun, Moon, Search, User, Phone, Car, Edit } from 'lucide-react';
 import Swal from 'sweetalert2/dist/sweetalert2.js';
 import { DB } from '@/lib/supabase-client';
-import SmartWashControllerDemo from '@/components/SmartWashControllerDemo';
 import { ServiceLoader, groupServicesByCategory } from '@/lib/service-cache';
 
 // Staff members data
@@ -68,11 +67,11 @@ export default function POSPage() {
       setError(null);
 
       const result = await serviceLoader.loadServices();
-      
+
       if (result.services && result.services.length > 0) {
         const groupedServices = groupServicesByCategory(result.services);
         setServices(groupedServices);
-        
+
         if (result.error) {
           setError(result.error);
         }
@@ -83,7 +82,7 @@ export default function POSPage() {
       console.error('Error fetching services:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load services';
       setError(errorMessage);
-      
+
       // Set empty services when API fails
       setServices({
         WASHES: [],
@@ -100,7 +99,7 @@ export default function POSPage() {
   useEffect(() => {
     // Initialize service worker for caching
     serviceLoader.initializeServiceWorker();
-    
+
     // Load services (cache-first approach)
     fetchServices();
   }, []);
@@ -1181,29 +1180,6 @@ export default function POSPage() {
                   <CreditCard className="w-4 h-4 mr-1" />
                   Pay
                 </button>
-
-                {/* Smart Wash Controller */}
-                {customerData && cart.length > 0 && (
-                  <div className="mt-4">
-                    <SmartWashControllerDemo
-                      bookingId={0} // Will be generated when started
-                      customerId={customerData.id}
-                      vehicleId={customerData.vehicle_id}
-                      cartItems={cart.map(item => ({
-                        id: parseInt(item.service.id),
-                        name: item.service.name,
-                        price: item.service.price,
-                        quantity: item.quantity
-                      }))}
-                      totalAmount={total}
-                      onStateChange={(newState) => {
-                        console.log('State changed to:', newState);
-                        // You can add additional logic here when state changes
-                      }}
-                      className="border-t pt-4"
-                    />
-                  </div>
-                )}
               </div>
             </div>
           </div>
