@@ -8,6 +8,7 @@ import { Minus, Plus, X, ShoppingCart, CreditCard, Sun, Moon, Search, User, Phon
 import Swal from 'sweetalert2/dist/sweetalert2.js';
 import { DB } from '@/lib/supabase-client';
 import SmartWashControllerDemo from '@/components/SmartWashControllerDemo';
+import { ServiceLoader, groupServicesByCategory } from '@/lib/service-cache';
 
 // Staff members data
 const staffMembers = [
@@ -58,47 +59,32 @@ export default function POSPage() {
   const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
+  const serviceLoader = ServiceLoader.getInstance();
 
-  // Fetch services from API
+  // Optimized fetch services with cache
   const fetchServices = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/services');
-      const result = await response.json();
-
-      // Check if response is successful - backend returns statusCode: 200 with data
-      if (response.ok && result.statusCode === 200 && result.data) {
-        // Group services by category - support both English and Vietnamese categories
-        const servicesArray = result.data;
-        const groupedServices = {
-          WASHES: servicesArray.filter((s: any) =>
-            s.category === 'WASHES'
-          ) || [],
-          DETAILING: servicesArray.filter((s: any) =>
-            s.category === 'DETAILING'
-          ) || [],
-          ADDONS: servicesArray.filter((s: any) =>
-            s.category === 'ADDONS'
-          ) || [],
-          NEW_CAR_PROTECTION: servicesArray.filter((s: any) =>
-            s.category === 'NEW_CAR_PROTECTION'
-          ) || []
-        };
-
+      const result = await serviceLoader.loadServices();
+      
+      if (result.services && result.services.length > 0) {
+        const groupedServices = groupServicesByCategory(result.services);
         setServices(groupedServices);
+        
+        if (result.error) {
+          setError(result.error);
+        }
       } else {
-        // Handle API error (backend not available)
-        const errorMsg = result.message || result.error || 'Failed to fetch services';
-        throw new Error(errorMsg);
+        throw new Error(result.error || 'No services available');
       }
     } catch (err) {
       console.error('Error fetching services:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load services';
       setError(errorMessage);
-
-      // Set empty services when API fails - no mock data
+      
+      // Set empty services when API fails
       setServices({
         WASHES: [],
         DETAILING: [],
@@ -110,8 +96,12 @@ export default function POSPage() {
     }
   };
 
-  // Load services on component mount
+  // Initialize and load services on component mount
   useEffect(() => {
+    // Initialize service worker for caching
+    serviceLoader.initializeServiceWorker();
+    
+    // Load services (cache-first approach)
     fetchServices();
   }, []);
 
@@ -702,54 +692,18 @@ export default function POSPage() {
             <div className="flex-1 flex flex-col">              {/* Header Bar */}
               <div className={`border-b p-3 flex items-center justify-between flex-shrink-0 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border-gray-500' : 'bg-gradient-to-br from-blue-50 via-white to-gray-100 border-gray-200'}`}>
                 <div className="flex items-center space-x-4">
-                  <h2 className={`text-lg font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>Washes</h2>
+                  <h2 className={`text-lg font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                    Services
+                  </h2>
                   <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors">
                     NOTES
                   </button>
                 </div>
                 <div className={`text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-600'}`}>
                   100%
-                </div>              </div>              {/* Services Content - Balanced Symmetrical Layout */}
+                </div>
+              </div>              {/* Services Content - Balanced Symmetrical Layout */}
               <div className="p-2 flex-1 space-y-2 overflow-auto">
-                {/* Loading State */}
-                {isLoading && (
-                  <div className="flex items-center justify-center py-12">
-                    <div className={`text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                      <p>Loading services...</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Error State */}
-                {error && (
-                  <div className="flex items-center justify-center py-12">
-                    <div className={`text-center max-w-md mx-auto ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
-                      <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-red-900/20' : 'bg-red-100'}`}>
-                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                        </svg>
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2">⚠️ Không thể tải dịch vụ</h3>
-                      <p className="text-sm opacity-75 mb-4">{error}</p>
-                      <div className="space-y-2">
-                        <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          💡 Backend API không khả dụng. Hãy kiểm tra kết nối hoặc khởi động backend server.
-                        </p>
-                        <button
-                          onClick={fetchServices}
-                          className={`mt-3 px-6 py-2 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 ${isDarkMode
-                            ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg'
-                            : 'bg-red-500 hover:bg-red-600 text-white shadow-lg'
-                            }`}
-                        >
-                          🔄 Thử lại
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {/* Services Grid - Only show when not loading and no error */}
                 {!isLoading && !error && (
                   <>
