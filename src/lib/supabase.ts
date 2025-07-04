@@ -17,15 +17,15 @@ export interface Customer {
 }
 
 export interface Service {
-  id: string
+  id: number
   name: string
-  description?: string
+  description?: string | null
   price: number
-  duration?: number
+  duration?: number | null
   category?: string
   active?: boolean
-  created_at: string
-  updated_at?: string
+  createdAt: string
+  updatedAt?: string
 }
 
 export interface Transaction {

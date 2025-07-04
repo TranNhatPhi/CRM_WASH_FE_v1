@@ -20,6 +20,7 @@ import {
   ShoppingCart,
   ChevronLeft,
   ChevronRight,
+  Wrench,
 } from 'lucide-react';
 import { cn } from '@/utils';
 
@@ -28,6 +29,7 @@ const navigation = [
   { name: 'Point of Sale', href: '/pos-dashboard', icon: ShoppingCart },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Cars', href: '/cars', icon: Car },
+  { name: 'Service', href: '/service', icon: Wrench },
   { name: 'Revenue', href: '/revenue', icon: DollarSign },
   { name: 'Staff', href: '/staff', icon: Users },
   { name: 'Reports', href: '/reports', icon: FileText },

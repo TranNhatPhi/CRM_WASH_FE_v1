@@ -13,21 +13,25 @@ interface DashboardService {
     time: string;
     services: string[];
     total: number;
-    status: 'pending' | 'in-progress' | 'finished';
-    paymentStatus: 'paid' | 'unpaid';
+    status: 'booked' | 'in-progress' | 'departed' | 'completed' | 'cancelled';
+    paymentStatus: 'paid' | 'unpaid' | 'refunded';
     customerPhone?: string;
     vehicleInfo?: {
         make?: string;
         model?: string;
         color?: string;
     };
+    assignedStaff?: string;
+    bookingDate?: string;
 }
 
 export default function POSDashboard() {
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('active'); // Default to active orders
     const [paymentFilter, setPaymentFilter] = useState('all');
+    const [dateFilter, setDateFilter] = useState('today');
+    const [staffFilter, setStaffFilter] = useState('all');
     const [services, setServices] = useState<DashboardService[]>([]);
     const [filteredServices, setFilteredServices] = useState<DashboardService[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -97,24 +101,26 @@ export default function POSDashboard() {
                         sum + (bs.services?.price || 0), 0) || 0;
 
                 // Map booking states to UI states
-                const mapStateToUI = (stateName: string) => {
+                const mapStateToUI = (stateName: string): 'booked' | 'in-progress' | 'departed' | 'completed' | 'cancelled' => {
                     switch (stateName) {
                         case 'pending':
                         case 'draft':
                         case 'confirmed':
-                            return 'pending';
+                            return 'booked';
                         case 'in_progress':
                         case 'washing':
                         case 'drying':
                             return 'in-progress';
                         case 'finished':
                         case 'completed':
-                            return 'finished';
+                            return 'completed';
+                        case 'departed':
+                            return 'departed';
                         case 'cancelled':
                         case 'no_show':
-                            return 'finished'; // Treat cancelled as finished for UI
+                            return 'cancelled';
                         default:
-                            return 'pending';
+                            return 'booked';
                     }
                 };
 
@@ -157,7 +163,9 @@ export default function POSDashboard() {
                     services: services,
                     total: total,
                     status: mapStateToUI(booking.booking_state?.state_name || 'pending'),
-                    paymentStatus: paymentStatus,
+                    paymentStatus: paymentStatus as 'paid' | 'unpaid' | 'refunded',
+                    assignedStaff: booking.assigned_staff || 'Unassigned',
+                    bookingDate: new Date(booking.createdAt).toLocaleDateString(),
                     vehicleInfo: {
                         make: booking.vehicles?.make || undefined,
                         model: booking.vehicles?.model || undefined,
@@ -186,23 +194,59 @@ export default function POSDashboard() {
         const filtered = services.filter((service: DashboardService) => {
             const matchesSearch = service.licensePlate.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 service.customer.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesStatus = statusFilter === 'all' || service.status === statusFilter;
+            
+            // Status filter logic
+            let matchesStatus = false;
+            if (statusFilter === 'all') {
+                matchesStatus = true;
+            } else if (statusFilter === 'active') {
+                // Active orders: booked, in-progress, completed
+                matchesStatus = ['booked', 'in-progress', 'completed'].includes(service.status);
+            } else {
+                matchesStatus = service.status === statusFilter;
+            }
+            
             const matchesPayment = paymentFilter === 'all' || service.paymentStatus === paymentFilter;
+            
+            // Date filter logic
+            let matchesDate = true;
+            const today = new Date();
+            const serviceDate = new Date(service.bookingDate || today);
+            
+            if (dateFilter === 'today') {
+                matchesDate = serviceDate.toDateString() === today.toDateString();
+            } else if (dateFilter === 'tomorrow') {
+                const tomorrow = new Date(today);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                matchesDate = serviceDate.toDateString() === tomorrow.toDateString();
+            } else if (dateFilter === 'this-week') {
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - today.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                matchesDate = serviceDate >= weekStart && serviceDate <= weekEnd;
+            }
+            
+            const matchesStaff = staffFilter === 'all' || service.assignedStaff === staffFilter;
 
-            return matchesSearch && matchesStatus && matchesPayment;
+            return matchesSearch && matchesStatus && matchesPayment && matchesDate && matchesStaff;
         });
         setFilteredServices(filtered);
         setCurrentPage(1); // Reset to first page when filters change
-    }, [searchQuery, statusFilter, paymentFilter, services]);
+    }, [searchQuery, statusFilter, paymentFilter, dateFilter, staffFilter, services]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'pending':
+            case 'booked':
                 return 'bg-blue-100 text-blue-800 border-blue-200';
             case 'in-progress':
                 return 'bg-orange-100 text-orange-800 border-orange-200';
-            case 'finished':
+            case 'departed':
+                return 'bg-purple-100 text-purple-800 border-purple-200';
+            case 'completed':
                 return 'bg-green-100 text-green-800 border-green-200';
+            case 'cancelled':
+                return 'bg-red-100 text-red-800 border-red-200';
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-200';
         }
@@ -214,6 +258,8 @@ export default function POSDashboard() {
                 return 'bg-red-600 text-white';
             case 'paid':
                 return 'bg-green-600 text-white';
+            case 'refunded':
+                return 'bg-yellow-600 text-white';
             default:
                 return 'bg-gray-600 text-white';
         }
@@ -221,12 +267,16 @@ export default function POSDashboard() {
 
     const formatStatus = (status: string) => {
         switch (status) {
-            case 'pending':
-                return 'Pending';
+            case 'booked':
+                return 'Booked';
             case 'in-progress':
                 return 'In Progress';
-            case 'finished':
-                return 'Finished';
+            case 'departed':
+                return 'Departed';
+            case 'completed':
+                return 'Completed';
+            case 'cancelled':
+                return 'Cancelled';
             default:
                 return status;
         }
@@ -470,9 +520,12 @@ export default function POSDashboard() {
                                         } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
                                 >
                                     <option value="all">All Status</option>
-                                    <option value="pending">Pending</option>
+                                    <option value="active">Active Orders</option>
+                                    <option value="booked">Booked</option>
                                     <option value="in-progress">In Progress</option>
-                                    <option value="finished">Finished</option>
+                                    <option value="departed">Departed</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
                                 </select>
                             </div>            <div>
                                 <select
@@ -486,6 +539,42 @@ export default function POSDashboard() {
                                     <option value="all">All Payments</option>
                                     <option value="paid">Paid</option>
                                     <option value="unpaid">Unpaid</option>
+                                    <option value="refunded">Refunded</option>
+                                </select>
+                            </div>
+
+                            {/* Date Filter */}
+                            <div>
+                                <select
+                                    value={dateFilter}
+                                    onChange={(e) => setDateFilter(e.target.value)}
+                                    className={`px-2 py-1.5 rounded-lg border transition-colors text-sm ${isDarkMode
+                                        ? 'bg-gray-800 border-gray-600 text-white'
+                                        : 'bg-white border-gray-300 text-gray-900'
+                                        } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+                                >
+                                    <option value="all">All Dates</option>
+                                    <option value="today">Today</option>
+                                    <option value="tomorrow">Tomorrow</option>
+                                    <option value="this-week">This Week</option>
+                                </select>
+                            </div>
+
+                            {/* Staff Filter */}
+                            <div>
+                                <select
+                                    value={staffFilter}
+                                    onChange={(e) => setStaffFilter(e.target.value)}
+                                    className={`px-2 py-1.5 rounded-lg border transition-colors text-sm ${isDarkMode
+                                        ? 'bg-gray-800 border-gray-600 text-white'
+                                        : 'bg-white border-gray-300 text-gray-900'
+                                        } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+                                >
+                                    <option value="all">All Staff</option>
+                                    <option value="John">John</option>
+                                    <option value="Sarah">Sarah</option>
+                                    <option value="Mike">Mike</option>
+                                    <option value="Unassigned">Unassigned</option>
                                 </select>
                             </div>
                         </div>
@@ -670,7 +759,7 @@ export default function POSDashboard() {
                                     {/* Payment Status - Show UNPAID for started but unpaid bookings */}
                                     {/* Show UNPAID for in-progress and finished unpaid bookings only */}
                                     {/* Hide for pending bookings and all paid bookings */}
-                                    {service.paymentStatus === 'unpaid' && (service.status === 'in-progress' || service.status === 'finished') && (
+                                    {service.paymentStatus === 'unpaid' && (service.status === 'in-progress' || service.status === 'completed') && (
                                         <div className={`absolute inset-x-3 top-5 w-auto py-1.5 px-2 rounded-lg text-center text-xs font-bold shadow-lg z-10 ${getPaymentColor(service.paymentStatus)}`}>
                                             UNPAID
                                         </div>
