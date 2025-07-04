@@ -10,6 +10,7 @@ const ServicePage = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,8 +25,7 @@ const ServicePage = () => {
     name: '',
     description: '',
     price: '',
-    category: '',
-    active: true
+    category: ''
   });
 
   const [categories, setCategories] = useState(['WASHES', 'DETAILING', 'ADDONS', 'Basic Wash', 'Premium Wash', 'Wax & Polish', 'Interior']);
@@ -49,7 +49,7 @@ const ServicePage = () => {
     try {
       setLoading(true);
       console.log('Fetching services from Supabase...');
-      
+
       const { data, error } = await supabase
         .from('services')
         .select('*')
@@ -61,7 +61,7 @@ const ServicePage = () => {
         console.error('Supabase error:', error);
         throw error;
       }
-      
+
       console.log('Services data:', data);
       setServices(data || []);
     } catch (error) {
@@ -111,36 +111,79 @@ const ServicePage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    // Validation
+    if (!formData.name.trim()) {
+      alert('Please enter a service name');
+      return;
+    }
+
+    if (!formData.price || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+      alert('Please enter a valid price greater than 0');
+      return;
+    }
+
+    setSaving(true);
+
     try {
+      console.log('Form data:', formData);
+
       const serviceData = {
-        name: formData.name,
-        description: formData.description,
+        name: formData.name.trim(),
+        description: formData.description?.trim() || null,
         price: parseFloat(formData.price),
-        category: formData.category,
-        active: formData.active
+        category: formData.category || 'WASHES'
       };
 
+      console.log('Service data to save:', serviceData);
+
       if (editingService) {
-        const { error } = await supabase
+        console.log('Updating service ID:', editingService.id);
+        const { data, error } = await supabase
           .from('services')
           .update({ ...serviceData, updatedAt: new Date().toISOString() })
-          .eq('id', editingService.id);
+          .eq('id', editingService.id)
+          .select();
 
-        if (error) throw error;
+        console.log('Update response:', { data, error });
+        if (error) {
+          console.error('Update error:', error);
+          throw new Error(`Failed to update service: ${error.message || error.details || 'Unknown error'}`);
+        }
+
+        if (!data || data.length === 0) {
+          throw new Error('No data returned from update operation');
+        }
+
+        console.log('Update successful, updated service:', data[0]);
       } else {
-        const { error } = await supabase
+        console.log('Creating new service');
+        const { data, error } = await supabase
           .from('services')
-          .insert([serviceData]);
+          .insert([{ ...serviceData, createdAt: new Date().toISOString() }])
+          .select();
 
-        if (error) throw error;
+        console.log('Insert response:', { data, error });
+        if (error) {
+          console.error('Insert error:', error);
+          throw new Error(`Failed to create service: ${error.message || error.details || 'Unknown error'}`);
+        }
+
+        if (!data || data.length === 0) {
+          throw new Error('No data returned from insert operation');
+        }
+
+        console.log('Insert successful, new service:', data[0]);
       }
 
       await fetchServices();
       closeModal();
     } catch (error) {
       console.error('Error saving service:', error);
-      alert('Error saving service. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Error saving service: ${errorMessage}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -168,8 +211,7 @@ const ServicePage = () => {
         name: service.name,
         description: service.description || '',
         price: service.price.toString(),
-        category: service.category || categories[0],
-        active: service.active === undefined || service.active !== false
+        category: service.category || categories[0]
       });
     } else {
       setEditingService(null);
@@ -177,22 +219,22 @@ const ServicePage = () => {
         name: '',
         description: '',
         price: '',
-        category: categories[0],
-        active: true
+        category: categories[0]
       });
     }
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
+    if (saving) return; // Prevent closing while saving
+
     setIsModalOpen(false);
     setEditingService(null);
     setFormData({
       name: '',
       description: '',
       price: '',
-      category: '',
-      active: true
+      category: ''
     });
   };
 
@@ -488,11 +530,10 @@ const ServicePage = () => {
                         {formatPrice(service.price)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          (service.active === undefined || service.active !== false)
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(service.active === undefined || service.active !== false)
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}>
                           {(service.active === undefined || service.active !== false) ? 'Active' : 'Inactive'}
                         </span>
                       </td>
@@ -508,7 +549,7 @@ const ServicePage = () => {
                           </Button>
                           <Button
                             onClick={() => handleDelete(service.id)}
-                            variant="outline" 
+                            variant="outline"
                             size="sm"
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                           >
@@ -549,7 +590,7 @@ const ServicePage = () => {
                     </svg>
                     Previous
                   </Button>
-                  
+
                   {/* Page numbers */}
                   <div className="flex items-center gap-1">
                     {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
@@ -563,7 +604,7 @@ const ServicePage = () => {
                       } else {
                         pageNum = currentPage - 2 + i;
                       }
-                      
+
                       return (
                         <Button
                           key={pageNum}
@@ -674,7 +715,7 @@ const ServicePage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <h4 className="text-lg font-medium text-gray-900 dark:text-white">Service Information</h4>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Service Name *
@@ -705,7 +746,7 @@ const ServicePage = () => {
 
                   <div className="space-y-4">
                     <h4 className="text-lg font-medium text-gray-900 dark:text-white">Pricing & Details</h4>
-                    
+
                     <div className="grid grid-cols-1 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -752,19 +793,6 @@ const ServicePage = () => {
                         </Button>
                       </div>
                     </div>
-
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="active"
-                        checked={formData.active}
-                        onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="active" className="ml-2 block text-sm text-gray-900 dark:text-white">
-                        Active Service
-                      </label>
-                    </div>
                   </div>
                 </div>
 
@@ -774,14 +802,23 @@ const ServicePage = () => {
                     type="button"
                     onClick={closeModal}
                     variant="outline"
+                    disabled={saving}
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={saving}
                   >
-                    {editingService ? 'Update' : 'Create'} Service
+                    {saving ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        {editingService ? 'Updating...' : 'Creating...'}
+                      </div>
+                    ) : (
+                      `${editingService ? 'Update' : 'Create'} Service`
+                    )}
                   </Button>
                 </div>
               </form>

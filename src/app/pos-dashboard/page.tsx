@@ -194,7 +194,7 @@ export default function POSDashboard() {
         const filtered = services.filter((service: DashboardService) => {
             const matchesSearch = service.licensePlate.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 service.customer.toLowerCase().includes(searchQuery.toLowerCase());
-            
+
             // Status filter logic
             let matchesStatus = false;
             if (statusFilter === 'all') {
@@ -205,14 +205,14 @@ export default function POSDashboard() {
             } else {
                 matchesStatus = service.status === statusFilter;
             }
-            
+
             const matchesPayment = paymentFilter === 'all' || service.paymentStatus === paymentFilter;
-            
+
             // Date filter logic
             let matchesDate = true;
             const today = new Date();
             const serviceDate = new Date(service.bookingDate || today);
-            
+
             if (dateFilter === 'today') {
                 matchesDate = serviceDate.toDateString() === today.toDateString();
             } else if (dateFilter === 'tomorrow') {
@@ -226,7 +226,7 @@ export default function POSDashboard() {
                 weekEnd.setDate(weekStart.getDate() + 6);
                 matchesDate = serviceDate >= weekStart && serviceDate <= weekEnd;
             }
-            
+
             const matchesStaff = staffFilter === 'all' || service.assignedStaff === staffFilter;
 
             return matchesSearch && matchesStatus && matchesPayment && matchesDate && matchesStaff;
@@ -788,4 +788,3 @@ export default function POSDashboard() {
         </div>
     );
 }
-    
